@@ -1,0 +1,3 @@
+enclosure/print/** -diff linguist-generated
+enclosure/lettering.scad linguist-generated
+docs/images/** -diff

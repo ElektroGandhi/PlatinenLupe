@@ -1,0 +1,8 @@
+{
+  "name": "Platinenlupe — loupe side",
+  "version": "1.0.0",
+  "new_install_prompt_erase": true,
+  "builds": [
+    { "chipFamily": "ESP32", "parts": [{ "path": "firmware/loupe_side_esp32.bin", "offset": 0 }] }
+  ]
+}

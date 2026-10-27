@@ -1,0 +1,12 @@
+# build output
+firmware/.pio/
+firmware/src/home_side/page.h
+flasher/firmware/
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+# local
+.vscode/
+.idea/
+*.swp

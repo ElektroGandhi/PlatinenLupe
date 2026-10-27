@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Platinenlupe Flasher</title>
+<meta name="color-scheme" content="dark">
+<script type="module" src="https://unpkg.com/esp-web-tools@10.1.0/dist/web/install-button.js?module"></script>
+<style>
+  :root { --bg: #16120e; --surface: #211b15; --line: #44382b; --text: #f3ead9; --muted: #bfae96; --accent: #ff9e3d; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 17px/1.5 system-ui, sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 32px 16px 48px; }
+  h1 { font: 700 32px/1.1 "Futura", "Century Gothic", "Avenir Next", system-ui, sans-serif; letter-spacing: .04em; margin: 0 0 6px; }
+  h1 span { color: var(--accent); }
+  p { color: var(--muted); }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 20px; margin-top: 18px; }
+  .card h2 { margin: 0 0 6px; font-size: 20px; }
+  ol { color: var(--muted); padding-left: 20px; }
+  esp-web-install-button button[slot="activate"] { background: var(--accent); color: #2a1400; border: 0; border-radius: 14px;
+    min-height: 52px; padding: 0 22px; font: 700 17px system-ui, sans-serif; cursor: pointer; }
+  code { background: #2c241c; padding: 1px 6px; border-radius: 6px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Platinen<span>lupe</span> Flasher</h1>
+  <p>Flash both boards from the browser — Chrome or Edge on a computer, one USB cable. Nothing to install.</p>
+
+  <div class="card">
+    <h2>1 · ESP32 — loupe side</h2>
+    <p>Talks to the loupe over Bluetooth and its WiFi.</p>
+    <esp-web-install-button manifest="manifest_loupe_side.json"><button slot="activate">Flash ESP32</button></esp-web-install-button>
+  </div>
+  <div class="card">
+    <h2>2 · Home side — NodeMCU (ESP8266) or second ESP32</h2>
+    <p>Serves the page as a hotspot, in your home network, or for your server.</p>
+    <esp-web-install-button manifest="manifest_home_side.json"><button slot="activate">Flash home side</button></esp-web-install-button>
+  </div>
+  <div class="card">
+    <h2>3 · Wire and go</h2>
+    <ol>
+      <li>Unplug both. Wire ESP32 <code>GPIO17</code> → NodeMCU <code>D7</code>, <code>GPIO16</code> ← <code>D8</code>, <code>GND</code> — <code>G</code>, <code>VIN</code> ← <code>VU</code>.</li>
+      <li>Power the NodeMCU over USB. Switch the loupe on.</li>
+      <li>Join the WiFi <code>Platinenlupe-XXXX</code>, password <code>platinenlupe</code>. The loupe opens by itself.</li>
+      <li>Change the hotspot password under <b>Device settings</b>.</li>
+    </ol>
+  </div>
+  <p>Flash one board at a time and pull the 5 V wire while flashing. Web flashing needs HTTPS (or localhost).</p>
+</main>
+</body>
+</html>
