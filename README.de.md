@@ -58,7 +58,7 @@ die Bauteil-Bestimmung. Einzelheiten: [docs/modes.md](docs/modes.md).
 
 | | |
 |---|---|
-| **Livebild** | bis zu ~16 Bilder/s von der Kamera, ohne Plug-in, ohne App |
+| **Livebild** | ~4 Bilder/s über einen NodeMCU (gemessen; die Kamera selbst liefert ~16), ohne Plug-in, ohne App |
 | **Gerade halten** | der Lagesensor der Lupe hält das Bild aufrecht; die Ansicht wird ein rundes Bullauge, damit sich keine Ecken drehen |
 | **Lichtring** | 0–100 % von der Seite aus, bleibt auch nach einem Neustart der Lupe erhalten |
 | **Spiegeln · Standbild · Zoom 1×/2×/4× · Foto speichern** | was man an der Werkbank wirklich braucht |
@@ -154,7 +154,8 @@ OpenSCAD-Quelle, STL und fertige 3MF: [enclosure/](enclosure/).
 | Alle drei Firmwares bauen (ESP32, ESP8266, ESP32 als Hausseite) | ✅ CI |
 | Seite auf Handy und Desktop, Deutsch und Englisch, Gerät / Server / Demo | ✅ Headless-Browser |
 | Hotspot-Modus am echten NodeMCU: WPA2-Hotspot, Captive-Portal-Umleitung, Seite 15/15 vollständig, Einstellungen, WLAN-Suche, Verbindung zum ESP32 | ✅ gemessen |
-| Kette mit eingeschalteter Lupe; Heimnetz- und Servermodus an der Hardware | ⏳ in Arbeit |
+| Ganze Kette an echter Hardware im Hotspot-Modus: Lupe → ESP32 → NodeMCU → Browser, 3,9 B/s, 1 Aussetzer in 30 s | ✅ gemessen |
+| Heimnetz- und Servermodus an der Hardware | ⏳ in Arbeit |
 | Gedrucktes Gehäuse | ⏳ noch nicht gedruckt |
 
 ## Häufige Fragen
