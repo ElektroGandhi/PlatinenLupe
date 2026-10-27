@@ -59,7 +59,7 @@ identification. Details: [docs/modes.md](docs/modes.md).
 
 | | |
 |---|---|
-| **Live view** | ~4 fps through a NodeMCU (measured; the camera itself delivers ~16), no plug-ins, no app |
+| **Live view** | ~5 fps through a NodeMCU (measured; the camera itself delivers ~16), no plug-ins, no app |
 | **Straighten** | the loupe's motion sensor keeps the picture upright; the view becomes a round porthole so nothing spins in the corners |
 | **Light ring** | 0–100 % from the page, kept alive across restarts of the loupe |
 | **Mirror · Freeze · Zoom 1×/2×/4× · Save photo** | the things you actually need at the bench |
@@ -155,7 +155,7 @@ OpenSCAD source, STL and a ready 3MF: [enclosure/](enclosure/).
 | All three firmwares build (ESP32, ESP8266, ESP32 home side) | ✅ CI |
 | Page on phone and desktop, English and German, device / server / demo | ✅ headless browser |
 | Hotspot mode on a real NodeMCU: WPA2 hotspot, captive-portal redirect, page 15/15 complete, settings, WiFi scan, link to the ESP32 | ✅ measured |
-| Whole chain on real hardware in hotspot mode: loupe → ESP32 → NodeMCU → browser, 3.9 fps, 1 miss in 30 s | ✅ measured |
+| Whole chain on real hardware in hotspot mode: loupe → ESP32 → NodeMCU → browser, 4.8 fps, 0 misses in 30 s; loupe restarts are recovered | ✅ measured |
 | Home-network and server mode on hardware | ⏳ in progress |
 | Printed case | ⏳ not printed yet |
 
@@ -181,6 +181,9 @@ Tested: chip TXW810, firmware 125 (shown on the page under *Loupe and connection
 
 **Is the hotspot secure?** WPA2 with a password you set. Change the default — the page nags until you do.
 Don't expose any of this to the internet. See [SECURITY.md](SECURITY.md).
+
+**My laptop loses the internet while it is in the hotspot.** That is the captive portal: inside the hotspot every
+name resolves to the board. Leave the hotspot (or use home-network mode) to get the internet back.
 
 **Does identification need a GPU?** It needs a vision model somewhere in your network. A Mac with LM Studio or a PC
 with Ollama works well; small models answer fast but guess more.
