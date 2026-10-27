@@ -58,7 +58,7 @@ die Bauteil-Bestimmung. Einzelheiten: [docs/modes.md](docs/modes.md).
 
 | | |
 |---|---|
-| **Livebild** | ~4 Bilder/s über einen NodeMCU (gemessen; die Kamera selbst liefert ~16), ohne Plug-in, ohne App |
+| **Livebild** | ~5 Bilder/s über einen NodeMCU (gemessen; die Kamera selbst liefert ~16), ohne Plug-in, ohne App |
 | **Gerade halten** | der Lagesensor der Lupe hält das Bild aufrecht; die Ansicht wird ein rundes Bullauge, damit sich keine Ecken drehen |
 | **Lichtring** | 0–100 % von der Seite aus, bleibt auch nach einem Neustart der Lupe erhalten |
 | **Spiegeln · Standbild · Zoom 1×/2×/4× · Foto speichern** | was man an der Werkbank wirklich braucht |
@@ -154,7 +154,7 @@ OpenSCAD-Quelle, STL und fertige 3MF: [enclosure/](enclosure/).
 | Alle drei Firmwares bauen (ESP32, ESP8266, ESP32 als Hausseite) | ✅ CI |
 | Seite auf Handy und Desktop, Deutsch und Englisch, Gerät / Server / Demo | ✅ Headless-Browser |
 | Hotspot-Modus am echten NodeMCU: WPA2-Hotspot, Captive-Portal-Umleitung, Seite 15/15 vollständig, Einstellungen, WLAN-Suche, Verbindung zum ESP32 | ✅ gemessen |
-| Ganze Kette an echter Hardware im Hotspot-Modus: Lupe → ESP32 → NodeMCU → Browser, 3,9 B/s, 1 Aussetzer in 30 s | ✅ gemessen |
+| Ganze Kette an echter Hardware im Hotspot-Modus: Lupe → ESP32 → NodeMCU → Browser, 4,8 B/s, 0 Aussetzer in 30 s; Neustarts der Lupe werden überbrückt | ✅ gemessen |
 | Heimnetz- und Servermodus an der Hardware | ⏳ in Arbeit |
 | Gedrucktes Gehäuse | ⏳ noch nicht gedruckt |
 
@@ -169,6 +169,9 @@ Geprüft: Chip TXW810, Firmware 125 (steht auf der Seite unter *Lupe und Verbind
 
 **Ist der Hotspot sicher?** WPA2 mit einem Passwort, das du setzt. Ändere das Standardpasswort – die Seite erinnert
 dich, bis du es tust. Nichts davon ins Internet stellen. Siehe [SECURITY.md](SECURITY.md).
+
+**Mein Laptop hat im Hotspot kein Internet mehr.** Das ist das Captive Portal: Im Hotspot zeigt jeder Name aufs
+Board. Hotspot verlassen (oder den Heimnetz-Modus nutzen), dann ist das Internet wieder da.
 
 **Braucht die Bestimmung eine Grafikkarte?** Sie braucht irgendwo im Netz ein Bildmodell. Ein Mac mit LM Studio oder
 ein PC mit Ollama klappt gut; kleine Modelle antworten schnell, raten aber öfter.

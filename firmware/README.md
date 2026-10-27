@@ -95,7 +95,7 @@ its WiFi: its 128-byte UART FIFO overflowed and almost every frame arrived broke
 0 frames). Now the home side grants frames one at a time (`READY`): one when its frame buffer is empty, up to
 10/s in server mode. The loupe side only sends a whole frame when it holds a grant.
 
-Measured on real hardware (NodeMCU in hotspot mode, loupe at −63 dBm): **3.9 frames/s**, 1 miss in 30 s.
+Measured on real hardware (NodeMCU in hotspot mode, loupe at −49 dBm): **4.8 frames/s**, 0 misses and 0 CRC errors in 30 s.
 The single frame buffer of the ESP8266 is the limit; a second ESP32 as home side has room for more.
 
 ## ESP32 UART pitfall
@@ -110,6 +110,15 @@ layout. Two 64 KB buffers left too little RAM for WiFi and Bluetooth (boot loop,
 
 The loupe side reports why it last restarted (`reset` in `/api/state` → `link.a`: `power_on`, `brownout`, `crash`, …).
 If the loupe is already awake, it skips Bluetooth and joins the WiFi found by a scan (password = BSSID).
+
+WiFi modem sleep stays **on**. With Bluetooth enabled, switching it off aborts in `wifi_set_ps_process` ("Should
+enable WiFi modem sleep when both WiFi and Bluetooth are enabled"), and starting Bluetooth while it is off aborts in
+`coex_enable` — both were reboot loops while waking the loupe. With modem sleep on: 4.8 frames/s, no loss.
+Bluetooth is therefore initialised in `setup()`, before WiFi.
+
+A loupe that restarts no longer knows the ESP32, but its beacons keep coming, so the station still looks connected.
+The loupe side treats RSSI 0 three times in a row, or 6 s without an answer while the home side sends commands, as
+lost — measured: restarts of the loupe are noticed and it is found again within seconds.
 
 NimBLE is initialised once and **never deinitialised**. After `NimBLEDevice::deinit(true)` a pending NimBLE
 timer fired into freed memory (`InstrFetchProhibited` in `os_callout_timer_cb`) and the board looped in reboots.

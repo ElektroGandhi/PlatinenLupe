@@ -72,8 +72,10 @@ static int outIndex = 0;
 
 static void frameReset() { frameNo = -1; frameTotal = 0; frameHave = 0; frameMask = 0; }
 
+static uint32_t lastReply = 0, lastCommand = 0;     // last packet from the loupe / last command from the home side
+
 static void onVideo(AsyncUDPPacket& p) {
-  lastPacket = millis();
+  lastPacket = lastReply = millis();
   const uint8_t* d = p.data();
   size_t n = p.length();
   if (n < 24 || n > frame::MAX_PAYLOAD) { linkSend(frame::VIDEO, d, n); return; }
@@ -118,15 +120,11 @@ static void drainOut() {
   outCount = 0;
 }
 
-static void onControl(AsyncUDPPacket& p) { linkSend(frame::CONTROL, p.data(), p.length()); }
+static void onControl(AsyncUDPPacket& p) { lastReply = millis(); linkSend(frame::CONTROL, p.data(), p.length()); }
 
 // ---- Find and wake the loupe -----------------------------------------------------------------
 static bool findAndWake() {
   state = SEARCH;
-  // Initialise once, never deinit: after NimBLEDevice::deinit(true) a pending NimBLE timer fired into
-  // freed memory — crash "InstrFetchProhibited" in os_callout_timer_cb, endless reboot loop.
-  static bool bleReady = false;
-  if (!bleReady) { NimBLEDevice::init(""); bleReady = true; }
   NimBLEScan* scan = NimBLEDevice::getScan();
   scan->setActiveScan(true);
   NimBLEScanResults hits = scan->start(5, false);
@@ -184,7 +182,10 @@ static bool findAwakeLoupe() {
 static bool joinLoupeWifi() {
   state = JOIN;
   WiFi.mode(WIFI_STA);
-  WiFi.setSleep(false);
+  // Keep WiFi modem sleep ON. With Bluetooth enabled, switching it off aborts in wifi_set_ps_process
+  // ("Should enable WiFi modem sleep when both WiFi and Bluetooth are enabled"), and starting Bluetooth while
+  // it is off aborts in coex_enable — both measured as reboot loops while waking the loupe.
+  WiFi.setSleep(true);
   for (int attempt = 0; attempt < 3; attempt++) {
     WiFi.begin(ssid, password);
     for (uint32_t t = millis(); millis() - t < 10000;) {
@@ -227,7 +228,14 @@ static void sendStatus() {
 static void connectionTask(void*) {
   for (;;) {
     if (state == CONNECTED) {
-      if (WiFi.status() != WL_CONNECTED) {
+      // A loupe that restarted no longer knows us, but its beacons keep coming, so the station still looks
+      // connected (measured: "connected" for minutes, RSSI 0, no frames). Treat that as lost: RSSI 0 three times
+      // in a row, or the home side is sending commands and the loupe has not answered for 6 s.
+      static int deadChecks = 0;
+      deadChecks = WiFi.RSSI() == 0 ? deadChecks + 1 : 0;
+      bool silent = millis() - lastCommand < 2000 && millis() - lastReply > 6000;
+      if (WiFi.status() != WL_CONNECTED || deadChecks >= 3 || silent) {
+        deadChecks = 0;
         Serial.println("Loupe WiFi lost, searching again");
         udpVideo.close();
         udpControl.close();
@@ -244,6 +252,7 @@ static void connectionTask(void*) {
     udpControl.listen(PORT_CONTROL);
     udpControl.onPacket(onControl);
     Serial.printf("Connected to %s, IP %s\n", ssid, WiFi.localIP().toString().c_str());
+    lastReply = millis();
     state = CONNECTED;
   }
 }
@@ -256,6 +265,9 @@ void setup() {
   Serial2.setTxBufferSize(TX_BUFFER);
   Serial2.setRxBufferSize(4096);
   Serial2.begin(LINK_BAUD, SERIAL_8N1, PIN_RX, PIN_TX);
+  // Bluetooth first, before WiFi, and only once: coexistence is set up in this order. Never deinit — after
+  // NimBLEDevice::deinit(true) a pending NimBLE timer fired into freed memory (os_callout_timer_cb, reboot loop).
+  NimBLEDevice::init("");
   xTaskCreatePinnedToCore(connectionTask, "connection", 8192, nullptr, 1, nullptr, 0);
 }
 
@@ -265,6 +277,7 @@ void loop() {
     if (!reader.feed(Serial2.read())) continue;
     if (reader.type == frame::READY && reader.len == 1) { credits = reader.data[0]; continue; }
     if (state != CONNECTED) continue;
+    if (reader.type == frame::CONTROL) lastCommand = millis();
     if (reader.type == frame::VIDEO) udpVideo.writeTo(reader.data, reader.len, LOUPE, PORT_VIDEO);
     if (reader.type == frame::CONTROL) udpControl.writeTo(reader.data, reader.len, LOUPE, PORT_CONTROL);
   }
