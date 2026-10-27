@@ -277,8 +277,12 @@ static void sendState() {
   web.send(200, "application/json", j);
 }
 
+static void grantFrames();
+static uint32_t lastGrant = 0;
+
 static void sendFrame() {
   lastViewer = millis();
+  grantFrames();
   readLink(800);                                    // wait for the next complete frame
   if (imgState != READY) { web.send(503, "text/plain", "no frame"); return; }
   web.sendHeader("Cache-Control", "no-store");
@@ -288,6 +292,7 @@ static void sendFrame() {
   web.send(200, "image/jpeg", "");
   if (writeAll(img, imgLen)) framesServed++;
   imgState = EMPTY;                                 // only now collect the next frame
+  lastGrant = 0;                                    // and ask for it right away
 }
 
 static void setLight() {
@@ -355,6 +360,20 @@ static void notFound() {
     return;
   }
   web.send(404, "text/plain", "not found");
+}
+
+// ---- Flow control: ask the loupe side for whole frames only when there is room for them --------
+// Built-in page: one frame when the buffer is empty (again after 400 ms if it got lost on the way).
+// Server mode: up to 10 frames/s while the server watches.
+
+static void grantFrames() {
+  uint32_t now = millis();
+  bool forPage = viewerActive() && imgState == EMPTY && now - lastGrant >= 400;
+  bool forServer = serverWatching() && now - lastGrant >= 100;
+  if (!forPage && !forServer) return;
+  uint8_t n = 1;
+  toLoupe(frame::READY, &n, 1);
+  lastGrant = now;
 }
 
 // ---- Keep the loupe awake while somebody watches the built-in page --------------------------
@@ -501,6 +520,7 @@ void loop() {
     relayIn(udpControl, frame::CONTROL, peerControl, peerControlPort);
   }
   readLink();
+  grantFrames();
   web.handleClient();
 #if defined(ESP8266)
   if (staOn) MDNS.update();

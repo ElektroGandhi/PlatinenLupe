@@ -88,7 +88,28 @@ Covers good frames, a flipped bit (CRC error), an oversized length and resynchro
 - One buffer only: the next frame is collected when the browser has fetched the previous one. The browser's
   fetch rate paces the stream.
 
+## Flow control
+
+The loupe delivers ~16 frames/s of up to 21 KB. Sent non-stop at 2 Mbaud, the ESP8266 could not keep up next to
+its WiFi: its 128-byte UART FIFO overflowed and almost every frame arrived broken (measured: 1310 CRC errors,
+0 frames). Now the home side grants frames one at a time (`READY`): one when its frame buffer is empty, up to
+10/s in server mode. The loupe side only sends a whole frame when it holds a grant.
+
+Measured on real hardware (NodeMCU in hotspot mode, loupe at −63 dBm): **3.9 frames/s**, 1 miss in 30 s.
+The single frame buffer of the ESP8266 is the limit; a second ESP32 as home side has room for more.
+
+## ESP32 UART pitfall
+
+`Serial2.availableForWrite()` reports the largest **contiguous** free piece of the driver's no-split ring buffer —
+at most half of it. Checking for room for a whole 20 KB frame therefore never succeeded. Frames now go out link
+frame by link frame (≤ 1.6 KB each) from a single slot buffer, in which every chunk already sits in link-frame
+layout. Two 64 KB buffers left too little RAM for WiFi and Bluetooth (boot loop, `esp_nimble_hci_init`
+`ESP_ERR_NO_MEM`).
+
 ## Bluetooth note (ESP32)
+
+The loupe side reports why it last restarted (`reset` in `/api/state` → `link.a`: `power_on`, `brownout`, `crash`, …).
+If the loupe is already awake, it skips Bluetooth and joins the WiFi found by a scan (password = BSSID).
 
 NimBLE is initialised once and **never deinitialised**. After `NimBLEDevice::deinit(true)` a pending NimBLE
 timer fired into freed memory (`InstrFetchProhibited` in `os_callout_timer_cb`) and the board looped in reboots.

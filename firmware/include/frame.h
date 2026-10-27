@@ -14,6 +14,7 @@ enum Type : uint8_t {
   VIDEO = 1,    // UDP port 61501 of the loupe, both directions
   CONTROL = 2,  // UDP port 61500 of the loupe, both directions
   STATUS = 3,   // loupe side → home side: JSON with the state of the loupe side
+  READY = 4,    // home side → loupe side: 1 byte, how many whole frames it may send now (flow control)
 };
 
 constexpr uint8_t MAGIC0 = 0xA5, MAGIC1 = 0x5A;
@@ -33,6 +34,15 @@ inline size_t build(uint8_t type, const uint8_t* data, uint16_t len, uint8_t* ou
   out[0] = MAGIC0; out[1] = MAGIC1; out[2] = type;
   out[3] = len & 0xFF; out[4] = len >> 8;
   memcpy(out + 5, data, len);
+  uint16_t c = crc16(out + 2, 3 + len);
+  out[5 + len] = c & 0xFF; out[6 + len] = c >> 8;
+  return len + OVERHEAD;
+}
+
+// Like build(), for a payload that already sits at out + 5: writes only header and CRC (no copy).
+inline size_t seal(uint8_t type, uint16_t len, uint8_t* out) {
+  out[0] = MAGIC0; out[1] = MAGIC1; out[2] = type;
+  out[3] = len & 0xFF; out[4] = len >> 8;
   uint16_t c = crc16(out + 2, 3 + len);
   out[5 + len] = c & 0xFF; out[6 + len] = c >> 8;
   return len + OVERHEAD;

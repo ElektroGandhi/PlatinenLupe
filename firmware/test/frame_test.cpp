@@ -1,3 +1,4 @@
+#include <cstring>
 // Host test for frame.h:  g++ -std=c++17 -Iinclude test/frame_test.cpp -o /tmp/frame_test && /tmp/frame_test
 #include <assert.h>
 #include <stdio.h>
@@ -39,6 +40,16 @@ int main() {
   uint8_t evil[] = {0xA5, 0x5A, 1, 0xFF, 0xFF};
   for (uint8_t b : evil) assert(!r.feed(b));
   assert(r.too_long == 1);
+  // seal(): a payload already in place gives exactly the same bytes as build().
+  uint8_t sealed[1500], built[1500];
+  memcpy(sealed + 5, data, 700);
+  size_t ns = frame::seal(frame::VIDEO, 700, sealed), nb = frame::build(frame::VIDEO, data, 700, built);
+  assert(ns == nb && memcmp(sealed, built, nb) == 0);
+  uint8_t one = 1;
+  n = frame::build(frame::READY, &one, 1, buf);
+  ok = false;
+  for (size_t i = 0; i < n; i++) ok |= r.feed(buf[i]);
+  assert(ok && r.type == frame::READY && r.len == 1 && r.data[0] == 1);
   printf("frame: all cases passed (good=%u, crc_errors=%u, too_long=%u)\n", r.good, r.crc_errors, r.too_long);
   return 0;
 }

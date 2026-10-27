@@ -59,7 +59,7 @@ identification. Details: [docs/modes.md](docs/modes.md).
 
 | | |
 |---|---|
-| **Live view** | up to ~16 fps from the camera, no plug-ins, no app |
+| **Live view** | ~4 fps through a NodeMCU (measured; the camera itself delivers ~16), no plug-ins, no app |
 | **Straighten** | the loupe's motion sensor keeps the picture upright; the view becomes a round porthole so nothing spins in the corners |
 | **Light ring** | 0–100 % from the page, kept alive across restarts of the loupe |
 | **Mirror · Freeze · Zoom 1×/2×/4× · Save photo** | the things you actually need at the bench |
@@ -155,7 +155,8 @@ OpenSCAD source, STL and a ready 3MF: [enclosure/](enclosure/).
 | All three firmwares build (ESP32, ESP8266, ESP32 home side) | ✅ CI |
 | Page on phone and desktop, English and German, device / server / demo | ✅ headless browser |
 | Hotspot mode on a real NodeMCU: WPA2 hotspot, captive-portal redirect, page 15/15 complete, settings, WiFi scan, link to the ESP32 | ✅ measured |
-| Chain with the real loupe switched on; home-network and server mode on hardware | ⏳ in progress |
+| Whole chain on real hardware in hotspot mode: loupe → ESP32 → NodeMCU → browser, 3.9 fps, 1 miss in 30 s | ✅ measured |
+| Home-network and server mode on hardware | ⏳ in progress |
 | Printed case | ⏳ not printed yet |
 
 ## Repository
