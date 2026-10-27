@@ -154,7 +154,8 @@ OpenSCAD source, STL and a ready 3MF: [enclosure/](enclosure/).
 | UART framing incl. CRC errors and resync | ✅ unit test |
 | All three firmwares build (ESP32, ESP8266, ESP32 home side) | ✅ CI |
 | Page on phone and desktop, English and German, device / server / demo | ✅ headless browser |
-| ESP32 + NodeMCU chain with the real loupe, all three modes | ⏳ in progress |
+| Hotspot mode on a real NodeMCU: WPA2 hotspot, captive-portal redirect, page 15/15 complete, settings, WiFi scan, link to the ESP32 | ✅ measured |
+| Chain with the real loupe switched on; home-network and server mode on hardware | ⏳ in progress |
 | Printed case | ⏳ not printed yet |
 
 ## Repository

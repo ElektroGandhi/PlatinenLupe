@@ -216,11 +216,28 @@ static String jsonString(const String& s) {
   return o + "\"";
 }
 
+// Writes everything or gives up after 4 s without progress. With little free heap the TCP stack accepts only part of
+// a large write; a single write() call then silently cut pages and frames short (measured: 13 464 of 17 391 bytes).
+static bool writeAll(const uint8_t* d, size_t n) {
+  WiFiClient c = web.client();
+  uint8_t buf[1024];
+  size_t off = 0;
+  for (uint32_t t = millis(); off < n && c.connected() && millis() - t < 4000;) {
+    size_t chunk = n - off < sizeof buf ? n - off : sizeof buf;
+    memcpy_P(buf, d + off, chunk);                  // works for flash (PROGMEM) and RAM alike
+    size_t w = c.write(buf, chunk);
+    if (w) { off += w; t = millis(); } else { delay(2); }
+  }
+  return off == n;
+}
+
 static void sendPage() {
   lastViewer = millis();
   web.sendHeader("Content-Encoding", "gzip");
   web.sendHeader("Cache-Control", "no-cache");
-  web.send_P(200, "text/html; charset=utf-8", (const char*)PAGE_GZ, PAGE_GZ_LEN);
+  web.setContentLength(PAGE_GZ_LEN);
+  web.send(200, "text/html; charset=utf-8", "");
+  writeAll(PAGE_GZ, PAGE_GZ_LEN);
 }
 
 // stage: live | wait | error; code tells the page which sentence to show (the page is bilingual).
@@ -269,8 +286,7 @@ static void sendFrame() {
   web.sendHeader("Access-Control-Expose-Headers", "X-Angle");
   web.setContentLength(imgLen);
   web.send(200, "image/jpeg", "");
-  web.client().write(img, imgLen);
-  framesServed++;
+  if (writeAll(img, imgLen)) framesServed++;
   imgState = EMPTY;                                 // only now collect the next frame
 }
 

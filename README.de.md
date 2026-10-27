@@ -153,7 +153,8 @@ OpenSCAD-Quelle, STL und fertige 3MF: [enclosure/](enclosure/).
 | UART-Rahmen samt CRC-Fehlern und Wiederaufsetzen | ✅ Unit-Test |
 | Alle drei Firmwares bauen (ESP32, ESP8266, ESP32 als Hausseite) | ✅ CI |
 | Seite auf Handy und Desktop, Deutsch und Englisch, Gerät / Server / Demo | ✅ Headless-Browser |
-| Kette ESP32 + NodeMCU mit der echten Lupe, alle drei Modi | ⏳ in Arbeit |
+| Hotspot-Modus am echten NodeMCU: WPA2-Hotspot, Captive-Portal-Umleitung, Seite 15/15 vollständig, Einstellungen, WLAN-Suche, Verbindung zum ESP32 | ✅ gemessen |
+| Kette mit eingeschalteter Lupe; Heimnetz- und Servermodus an der Hardware | ⏳ in Arbeit |
 | Gedrucktes Gehäuse | ⏳ noch nicht gedruckt |
 
 ## Häufige Fragen
