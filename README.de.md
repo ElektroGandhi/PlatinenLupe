@@ -155,6 +155,7 @@ OpenSCAD-Quelle, STL und fertige 3MF: [enclosure/](enclosure/).
 | Seite auf Handy und Desktop, Deutsch und Englisch, Gerät / Server / Demo | ✅ Headless-Browser |
 | Hotspot-Modus am echten NodeMCU: WPA2-Hotspot, Captive-Portal-Umleitung, Seite 15/15 vollständig, Einstellungen, WLAN-Suche, Verbindung zum ESP32 | ✅ gemessen |
 | Ganze Kette an echter Hardware im Hotspot-Modus: Lupe → ESP32 → NodeMCU → Browser, 4,8 B/s, 0 Aussetzer in 30 s; Neustarts der Lupe werden überbrückt | ✅ gemessen |
+| Schwacher Funk (Lupe bei −75 dBm): 3,4 B/s gleichmäßig über 3 min, 0 Kabelfehler (bei 2 Mbaud fror das Bild im Kreis ein – jetzt 1 Mbaud) | ✅ gemessen |
 | Heimnetz- und Servermodus an der Hardware | ⏳ in Arbeit |
 | Gedrucktes Gehäuse | ⏳ noch nicht gedruckt |
 

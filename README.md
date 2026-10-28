@@ -156,6 +156,7 @@ OpenSCAD source, STL and a ready 3MF: [enclosure/](enclosure/).
 | Page on phone and desktop, English and German, device / server / demo | ✅ headless browser |
 | Hotspot mode on a real NodeMCU: WPA2 hotspot, captive-portal redirect, page 15/15 complete, settings, WiFi scan, link to the ESP32 | ✅ measured |
 | Whole chain on real hardware in hotspot mode: loupe → ESP32 → NodeMCU → browser, 4.8 fps, 0 misses in 30 s; loupe restarts are recovered | ✅ measured |
+| Weak signal (loupe at −75 dBm): 3.4 fps steady for 3 min, 0 link errors (at 2 Mbaud it froze in a loop — now 1 Mbaud) | ✅ measured |
 | Home-network and server mode on hardware | ⏳ in progress |
 | Printed case | ⏳ not printed yet |
 

@@ -18,7 +18,7 @@
 #include "frame.h"
 
 #ifndef LINK_BAUD
-#define LINK_BAUD 2000000
+#define LINK_BAUD 1000000
 #endif
 #ifndef PIN_RX
 #define PIN_RX 16   // labelled RX2 / D16

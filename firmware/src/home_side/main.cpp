@@ -47,7 +47,7 @@ using WebServerT = WebServer;
 #include "page.h"   // generated from web/index.html by scripts/embed_page.py (gzip)
 
 #ifndef LINK_BAUD
-#define LINK_BAUD 2000000
+#define LINK_BAUD 1000000
 #endif
 #define PIN_RESET 0  // FLASH / BOOT button
 
@@ -103,7 +103,7 @@ static uint8_t linkBuf[frame::MAX_PAYLOAD + frame::OVERHEAD];
 
 static String apSsid;
 static bool apOn = false, staOn = false, fallback = false;
-static uint32_t linkFull = 0, udpErrors = 0;
+static uint32_t linkFull = 0, udpErrors = 0, overruns = 0;   // overruns: bytes lost before the reader saw them
 
 static void toLoupe(uint8_t type, const uint8_t* d, size_t n) {
   if (n > frame::MAX_PAYLOAD) return;
@@ -173,6 +173,9 @@ static void frameChunk(const uint8_t* d, size_t n) {
 
 static void readLink(uint32_t waitMs = 0) {
   uint32_t t = millis();
+#if defined(ESP8266)
+  if (LINK.hasOverrun()) overruns++;
+#endif
   do {
     int n = 0;
     while (LINK.available() && n++ < 4096) {
@@ -272,7 +275,7 @@ static void sendState() {
   j += ",\"link\":{\"a\":" + (aFresh ? sideA : String("null"));
   j += ",\"b\":{\"rssi\":" + String(staOn ? WiFi.RSSI() : 0) + ",\"crc\":" + reader.crc_errors +
        ",\"heap\":" + ESP.getFreeHeap() + ",\"served\":" + framesServed + ",\"too_big\":" + tooBig +
-       ",\"buffer\":" + imgCapacity + ",\"link_full\":" + linkFull + "}}}";
+       ",\"buffer\":" + imgCapacity + ",\"link_full\":" + linkFull + ",\"overruns\":" + overruns + "}}}";
   web.sendHeader("Cache-Control", "no-store");
   web.send(200, "application/json", j);
 }

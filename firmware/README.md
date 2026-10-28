@@ -38,7 +38,7 @@ always the same page the server serves.
 | `GND` | — | `G` | `GND` |
 | `VIN` | ← 5 V | `VU` | `VIN` ↔ `VIN` |
 
-UART at 2 Mbaud, framed with a CRC (`include/frame.h`). The ESP8266 moves its UART to D7/D8 with `Serial.swap()`;
+UART at 1 Mbaud, framed with a CRC (`include/frame.h`). The ESP8266 moves its UART to D7/D8 with `Serial.swap()`;
 its log output goes to `D4` (TX only, 115200 baud).
 
 ## First start
@@ -97,6 +97,14 @@ its WiFi: its 128-byte UART FIFO overflowed and almost every frame arrived broke
 
 Measured on real hardware (NodeMCU in hotspot mode, loupe at −49 dBm): **4.8 frames/s**, 0 misses and 0 CRC errors in 30 s.
 The single frame buffer of the ESP8266 is the limit; a second ESP32 as home side has room for more.
+
+## Why 1 Mbaud
+
+At 2 Mbaud the link worked with the loupe close by (−49 dBm: 4.8 frames/s, 0 errors). With the loupe further away
+(−71 dBm) the ESP32 retransmits a lot, and nearly every frame arrived broken at the ESP8266: 753 CRC errors in
+10 minutes, no complete frame after the first 30 s — the picture froze, came back for a few frames, froze again.
+At 1 Mbaud, same place, even weaker signal (−75 dBm): **0 CRC errors, 0 overruns, 3.4 frames/s steady over
+3 minutes**, every frame sent was delivered. `link.b.overruns` in `/api/state` counts bytes the ESP8266 lost.
 
 ## ESP32 UART pitfall
 
