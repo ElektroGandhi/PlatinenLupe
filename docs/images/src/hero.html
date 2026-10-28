@@ -1,0 +1,35 @@
+<!doctype html>
+<!-- Source of docs/images/hero.png. Render: chrome --headless=new --window-size=1600,800 --screenshot=hero.png hero.html -->
+<html><head><meta charset="utf-8"><style>
+*{box-sizing:border-box}
+body{margin:0;width:1600px;height:800px;overflow:hidden;background:#16120e;font-family:"Futura","Century Gothic","URW Gothic","Avenir Next",system-ui,sans-serif;color:#f3ead9;position:relative}
+.bg{position:absolute;inset:0;background:radial-gradient(900px 600px at 82% 30%,rgba(255,158,61,.22),transparent 60%),radial-gradient(700px 500px at 0% 100%,rgba(111,214,196,.12),transparent 60%)}
+.stars{position:absolute;inset:0;background-image:radial-gradient(#f3ead9 1px,transparent 1.5px);background-size:46px 46px;opacity:.07}
+.orbit{position:absolute;border:2px solid rgba(111,214,196,.35);border-radius:50%}
+.left{position:absolute;left:90px;top:110px;width:700px}
+.kicker{display:inline-block;font:700 18px/1 system-ui,sans-serif;letter-spacing:.24em;color:#6fd6c4;padding:10px 16px;border:2px solid rgba(111,214,196,.5);border-radius:999px}
+h1{font-size:104px;line-height:.95;margin:30px 0 18px;letter-spacing:.02em}
+h1 span{color:#ff9e3d}
+p{font:500 32px/1.32 system-ui,sans-serif;color:#e3d6bf;margin:0 0 34px;max-width:600px}
+.chips{display:flex;gap:14px;flex-wrap:wrap;max-width:640px}
+.chip{font:700 23px/1 system-ui,sans-serif;padding:14px 20px;border-radius:16px;background:#2a221a;border:2px solid #44382b}
+.chip b{color:#ff9e3d}
+.case{position:absolute;right:430px;top:290px;width:440px;height:440px;border-radius:50%;background:radial-gradient(circle,#f5efe2 0%,#e9dfca 60%,#cdbf9f 100%);box-shadow:0 0 0 14px #2c241c,0 0 0 18px #ff9e3d,0 40px 80px rgba(0,0,0,.6);overflow:hidden}
+.case img{position:absolute;left:-50px;top:-20px;width:540px}
+.phone{position:absolute;right:80px;top:70px;width:330px;height:680px;border-radius:46px;background:#0c0a08;border:10px solid #2c241c;box-shadow:0 0 0 2px #5a4a38,0 40px 90px rgba(0,0,0,.7);overflow:hidden}
+.phone img{width:100%;display:block}
+.beam{position:absolute;right:400px;top:470px;width:150px;height:6px;background:repeating-linear-gradient(90deg,#ff9e3d 0 14px,transparent 14px 24px);transform:rotate(-14deg);opacity:.9}
+</style></head><body>
+<div class="bg"></div><div class="stars"></div>
+<div class="orbit" style="left:950px;top:40px;width:640px;height:220px;transform:rotate(-18deg)"></div>
+<div class="orbit" style="left:880px;top:560px;width:540px;height:160px;transform:rotate(12deg)"></div>
+<div class="left">
+  <div class="kicker">NO APP · NO CLOUD · NO SERVER</div>
+  <h1>Platinen<span>lupe</span></h1>
+  <p>A cheap WiFi ear camera, turned into a circuit-board microscope for any browser.</p>
+  <div class="chips"><span class="chip"><b>①</b> Hotspot</span><span class="chip"><b>②</b> Home network + local AI</span></div>
+</div>
+<div class="case"><img src="../case_front.png"></div>
+<div class="beam"></div>
+<div class="phone"><img src="../ui_phone_en.png"></div>
+</body></html>

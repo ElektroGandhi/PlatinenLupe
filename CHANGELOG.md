@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.1.0 — 2026-10-28
+
+No server, no Docker any more.
+
+- **Two modes** instead of three: hotspot (default) and home network.
+- **Part identification runs in the browser:** it crops the focus ring and asks your vision model directly
+  (LM Studio, Ollama, OpenAI-compatible). The board only stores the model's address under *Device settings*.
+  Tested against LM Studio: SOIC-8 "LM358" recognised with high confidence in 5.3 s.
+- The settings page shows the board's real address (`.local` names do not resolve in Chrome on Android).
+- Settings from 1.0 are carried over on update (a board in "server" mode lands in home-network mode).
+- Link between the boards at 1 Mbaud: at 2 Mbaud a distant loupe froze the picture in a loop.
+- Removed: `server/` (Python, Docker), its simulator and tests.
+
 ## 1.0.0 — 2026-10-27
 
 First public version.

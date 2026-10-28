@@ -6,70 +6,50 @@
     <symbol id="board" viewBox="0 0 60 40"><rect x="2" y="4" width="56" height="32" rx="4" fill="#1f6b4a" stroke="#7fdc94" stroke-width="1.5"/><rect x="18" y="11" width="24" height="18" rx="2" fill="#c9c9c9"/><g fill="#f6d38a"><rect x="6" y="6" width="3" height="3"/><rect x="6" y="31" width="3" height="3"/><rect x="51" y="6" width="3" height="3"/><rect x="51" y="31" width="3" height="3"/></g></symbol>
     <symbol id="phone" viewBox="0 0 40 70"><rect x="2" y="2" width="36" height="66" rx="7" fill="#f3ead9"/><rect x="6" y="8" width="28" height="50" rx="3" fill="#16120e"/><circle cx="20" cy="30" r="10" fill="#1f6b4a" stroke="#ff9e3d" stroke-width="2"/></symbol>
     <symbol id="router" viewBox="0 0 60 40"><rect x="4" y="18" width="52" height="18" rx="5" fill="#bfae96"/><path d="M16 18 L10 2 M44 18 L50 2" stroke="#bfae96" stroke-width="3" stroke-linecap="round"/><circle cx="16" cy="27" r="2.5" fill="#7fdc94"/><circle cx="26" cy="27" r="2.5" fill="#7fdc94"/></symbol>
-    <symbol id="server" viewBox="0 0 50 60"><rect x="4" y="4" width="42" height="24" rx="5" fill="#bfae96"/><rect x="4" y="32" width="42" height="24" rx="5" fill="#bfae96"/><circle cx="14" cy="16" r="3" fill="#7fdc94"/><circle cx="14" cy="44" r="3" fill="#ff9e3d"/></symbol>
+    <symbol id="brain" viewBox="0 0 50 50"><circle cx="25" cy="25" r="22" fill="#2c241c" stroke="#7fdc94" stroke-width="2.5"/><path d="M15 26c0-7 5-11 10-11s10 4 10 11-5 10-10 10-10-3-10-10z" fill="none" stroke="#7fdc94" stroke-width="2.5"/><path d="M25 15v21M18 22h14M18 30h14" stroke="#7fdc94" stroke-width="2"/></symbol>
     <g id="waves" fill="none" stroke="#6fd6c4" stroke-width="3" stroke-linecap="round"><path d="M0 -10 a12 12 0 0 1 0 20"/><path d="M8 -18 a22 22 0 0 1 0 36"/></g>
   </defs>
   <rect width="1200" height="560" rx="28" fill="#16120e"/>
   <rect width="1200" height="560" rx="28" fill="url(#glow)"/>
-  <text x="600" y="58" text-anchor="middle" fill="#f3ead9" font-size="30" font-weight="700" letter-spacing="2">THREE WAYS TO LOOK CLOSER</text>
-  <text x="600" y="88" text-anchor="middle" fill="#bfae96" font-size="17" font-family="system-ui, sans-serif">switch any time on the device's own page — the viewer is always included</text>
+  <text x="600" y="58" text-anchor="middle" fill="#f3ead9" font-size="30" font-weight="700" letter-spacing="2">TWO WAYS TO LOOK CLOSER</text>
+  <text x="600" y="88" text-anchor="middle" fill="#bfae96" font-size="17" font-family="system-ui, sans-serif">switch any time on the device's own page — no server, no Docker, no app</text>
 
   <!-- Hotspot -->
-  <g transform="translate(36 116)">
-    <rect width="360" height="408" rx="22" fill="url(#card)" stroke="#ff9e3d" stroke-width="3"/>
-    <text x="24" y="44" fill="#ff9e3d" font-size="15" font-weight="700" letter-spacing="2">DEFAULT</text>
-    <text x="24" y="78" fill="#f3ead9" font-size="30" font-weight="700">Hotspot</text>
-    <use href="#loupe" x="22" y="130" width="54" height="54"/>
-    <use href="#waves" transform="translate(84 158) scale(.8)"/>
-    <use href="#board" x="112" y="138" width="54" height="36"/>
-    <path d="M168 156 h18" stroke="#f3ead9" stroke-width="3" stroke-dasharray="4 4"/>
-    <use href="#board" x="188" y="138" width="54" height="36"/>
-    <use href="#waves" transform="translate(252 158) scale(.8)"/>
-    <use href="#phone" x="282" y="122" width="40" height="70"/>
-    <text x="24" y="246" fill="#f3ead9" font-size="19" font-family="system-ui, sans-serif">Own WiFi, WPA2.</text>
-    <text x="24" y="274" fill="#f3ead9" font-size="19" font-family="system-ui, sans-serif">No router, no internet,</text>
-    <text x="24" y="302" fill="#f3ead9" font-size="19" font-family="system-ui, sans-serif">no computer.</text>
-    <text x="24" y="346" fill="#bfae96" font-size="17" font-family="system-ui, sans-serif">Join it — the loupe opens</text>
-    <text x="24" y="370" fill="#bfae96" font-size="17" font-family="system-ui, sans-serif">by itself at 192.168.4.1</text>
+  <g transform="translate(40 116)">
+    <rect width="540" height="408" rx="22" fill="url(#card)" stroke="#ff9e3d" stroke-width="3"/>
+    <text x="28" y="44" fill="#ff9e3d" font-size="15" font-weight="700" letter-spacing="2">DEFAULT</text>
+    <text x="28" y="80" fill="#f3ead9" font-size="32" font-weight="700">Hotspot</text>
+    <use href="#loupe" x="50" y="128" width="60" height="60"/>
+    <use href="#waves" transform="translate(122 158) scale(.9)"/>
+    <use href="#board" x="160" y="138" width="62" height="40"/>
+    <path d="M224 158 h26" stroke="#f3ead9" stroke-width="3" stroke-dasharray="4 4"/>
+    <use href="#board" x="252" y="138" width="62" height="40"/>
+    <use href="#waves" transform="translate(326 158) scale(.9)"/>
+    <use href="#phone" x="372" y="120" width="44" height="76"/>
+    <text x="28" y="252" fill="#f3ead9" font-size="20" font-family="system-ui, sans-serif">Its own WiFi, WPA2. No router, no internet,</text>
+    <text x="28" y="282" fill="#f3ead9" font-size="20" font-family="system-ui, sans-serif">no computer — just USB power.</text>
+    <text x="28" y="334" fill="#bfae96" font-size="18" font-family="system-ui, sans-serif">Join it and the loupe opens by itself</text>
+    <text x="28" y="360" fill="#bfae96" font-size="18" font-family="system-ui, sans-serif">at 192.168.4.1.</text>
   </g>
 
   <!-- Home network -->
-  <g transform="translate(420 116)">
-    <rect width="360" height="408" rx="22" fill="url(#card)" stroke="#44382b" stroke-width="2"/>
-    <text x="24" y="44" fill="#6fd6c4" font-size="15" font-weight="700" letter-spacing="2">EVERY BROWSER</text>
-    <text x="24" y="78" fill="#f3ead9" font-size="30" font-weight="700">Home network</text>
-    <use href="#loupe" x="12" y="130" width="54" height="54"/>
-    <use href="#waves" transform="translate(70 158) scale(.7)"/>
-    <use href="#board" x="92" y="138" width="50" height="34"/>
-    <path d="M143 156 h14" stroke="#f3ead9" stroke-width="3" stroke-dasharray="4 4"/>
-    <use href="#board" x="158" y="138" width="50" height="34"/>
-    <use href="#waves" transform="translate(216 158) scale(.7)"/>
-    <use href="#router" x="236" y="132" width="54" height="36"/>
-    <use href="#phone" x="300" y="122" width="40" height="70"/>
-    <text x="24" y="246" fill="#f3ead9" font-size="19" font-family="system-ui, sans-serif">Joins your WiFi.</text>
-    <text x="24" y="274" fill="#f3ead9" font-size="19" font-family="system-ui, sans-serif">Phone, laptop, tablet —</text>
-    <text x="24" y="302" fill="#f3ead9" font-size="19" font-family="system-ui, sans-serif">all at the same time.</text>
-    <text x="24" y="346" fill="#bfae96" font-size="17" font-family="system-ui, sans-serif">platinenlupe.local · falls back</text>
-    <text x="24" y="370" fill="#bfae96" font-size="17" font-family="system-ui, sans-serif">to its hotspot if WiFi is gone</text>
-  </g>
-
-  <!-- Server -->
-  <g transform="translate(804 116)">
-    <rect width="360" height="408" rx="22" fill="url(#card)" stroke="#44382b" stroke-width="2"/>
-    <text x="24" y="44" fill="#7fdc94" font-size="15" font-weight="700" letter-spacing="2">+ PART IDENTIFICATION</text>
-    <text x="24" y="78" fill="#f3ead9" font-size="30" font-weight="700">Server</text>
-    <use href="#loupe" x="12" y="130" width="54" height="54"/>
-    <use href="#waves" transform="translate(70 158) scale(.7)"/>
-    <use href="#board" x="92" y="138" width="50" height="34"/>
-    <path d="M143 156 h14" stroke="#f3ead9" stroke-width="3" stroke-dasharray="4 4"/>
-    <use href="#board" x="158" y="138" width="50" height="34"/>
-    <use href="#waves" transform="translate(216 158) scale(.7)"/>
-    <use href="#server" x="240" y="126" width="46" height="56"/>
-    <use href="#phone" x="300" y="122" width="40" height="70"/>
-    <text x="24" y="246" fill="#f3ead9" font-size="19" font-family="system-ui, sans-serif">Your Pi or home server asks</text>
-    <text x="24" y="274" fill="#f3ead9" font-size="19" font-family="system-ui, sans-serif">a local vision model:</text>
-    <text x="24" y="302" fill="#ff9e3d" font-size="19" font-weight="700" font-family="system-ui, sans-serif">"Resistor · 0805 · 10 kΩ"</text>
-    <text x="24" y="346" fill="#bfae96" font-size="17" font-family="system-ui, sans-serif">LM Studio · Ollama · any</text>
-    <text x="24" y="370" fill="#bfae96" font-size="17" font-family="system-ui, sans-serif">OpenAI-compatible server</text>
+  <g transform="translate(620 116)">
+    <rect width="540" height="408" rx="22" fill="url(#card)" stroke="#44382b" stroke-width="2"/>
+    <text x="28" y="44" fill="#7fdc94" font-size="15" font-weight="700" letter-spacing="2">+ PART IDENTIFICATION</text>
+    <text x="28" y="80" fill="#f3ead9" font-size="32" font-weight="700">Home network</text>
+    <use href="#loupe" x="20" y="128" width="58" height="58"/>
+    <use href="#waves" transform="translate(84 158) scale(.8)"/>
+    <use href="#board" x="112" y="138" width="56" height="38"/>
+    <path d="M169 157 h16" stroke="#f3ead9" stroke-width="3" stroke-dasharray="4 4"/>
+    <use href="#board" x="186" y="138" width="56" height="38"/>
+    <use href="#waves" transform="translate(250 158) scale(.8)"/>
+    <use href="#router" x="276" y="134" width="58" height="38"/>
+    <use href="#phone" x="352" y="120" width="44" height="76"/>
+    <path d="M402 158 h26" stroke="#7fdc94" stroke-width="3" stroke-dasharray="4 4"/>
+    <use href="#brain" x="432" y="132" width="52" height="52"/>
+    <text x="28" y="252" fill="#f3ead9" font-size="20" font-family="system-ui, sans-serif">Joins your WiFi — every browser in the house.</text>
+    <text x="28" y="282" fill="#f3ead9" font-size="20" font-family="system-ui, sans-serif">The browser asks your own vision model:</text>
+    <text x="28" y="312" fill="#ff9e3d" font-size="20" font-weight="700" font-family="system-ui, sans-serif">"Resistor · 0805 · 10 kΩ"</text>
+    <text x="28" y="360" fill="#bfae96" font-size="18" font-family="system-ui, sans-serif">LM Studio · Ollama · any OpenAI-compatible server</text>
   </g>
 </svg>

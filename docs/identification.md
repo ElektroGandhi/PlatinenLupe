@@ -1,10 +1,13 @@
 # Part identification
 
-In **server mode** you can tap the image to place a focus ring on a part. The server cuts out that square, sends it to
-a vision-language model running **on your own machine**, and shows the answer:
+In **home-network mode** you can tap the image to place a focus ring on a part. Your browser cuts out that square,
+sends it to a vision-language model running **on a machine in your network**, and shows the answer:
 
 > **Resistor** · SMD 0805 · marking `103` · value 10 kΩ · *high confidence*
 > *Black rectangular body with three digits.*
+
+There is no server of ours in between: the board only stores the model's address (*Device settings → Vision model*),
+the browser does the rest.
 
 ## Why a vision-language model and not an object detector
 
@@ -15,13 +18,24 @@ the middle of this picture?"* — and reads markings on the way.
 
 ## Supported model servers
 
-The server detects the kind from `PL_VLM_URL`:
+The page detects the kind from the address you enter:
 
-| Server | `PL_VLM_URL` | Model |
+| Server | Address | Model |
 |---|---|---|
-| [LM Studio](https://lmstudio.ai) | `http://host:1234` | the vision model that is **currently loaded** — nothing is ever loaded on purpose. `PL_VLM_MODEL` pins one. |
-| [Ollama](https://ollama.com) | `http://host:11434` | `PL_VLM_MODEL`, default `gemma3:12b` |
-| llama.cpp server, vLLM, LocalAI, … (OpenAI-compatible) | `http://host:port` | `PL_VLM_MODEL`; `PL_VLM_API_KEY` if the server wants one |
+| [LM Studio](https://lmstudio.ai) | `http://host:1234` | the vision model that is **currently loaded** — nothing is ever loaded on purpose. *Model name* pins one. |
+| [Ollama](https://ollama.com) | `http://host:11434` | *Model name*, default `gemma3:12b` |
+| llama.cpp server, vLLM, LocalAI, … (OpenAI-compatible) | `http://host:port` | *Model name* |
+
+### The model server must let the browser in
+
+Because the page comes from the board and the model lives on another machine, the browser asks the model server
+for permission first (CORS). Allow it once:
+
+- **LM Studio:** Developer → Server settings → **Enable CORS**.
+- **Ollama:** start it with `OLLAMA_ORIGINS=*` (or the board's address).
+- A firewall on the model machine must let your phones and laptops reach the port.
+
+If any of this is missing, the page says *"The model server does not answer this browser"*.
 
 Thinking is switched off (`reasoning_effort: "none"` / `think: false`): thinking models otherwise spend their token
 budget on reasoning and return an empty answer.
@@ -48,12 +62,9 @@ markings and values as a hint, not a measurement.
 Bigger models are better at telling resistors from capacitors; the package (0603/0805, SOT-23, SOIC-8) is usually
 right. Silkscreen text is sometimes taken for a part — the prompt explicitly tells the model it is not.
 
-## Tuning
+## Behaviour
 
-| Variable | Default | |
-|---|---|---|
-| `PL_IDENTIFY` | `1` | `0` switches identification off entirely |
-| `PL_IDENTIFY_CONTINUOUS` | `1` | identify continuously (otherwise only on tap / "Identify now") |
-| `PL_IDENTIFY_INTERVAL_S` | `1` | minimum seconds between two identifications |
-
-The identification never builds a queue: it always takes the newest frame, so a slow model just answers less often.
+- **Continuous** (button on the card): a new identification about once a second, always of the newest frame —
+  a slow model simply answers less often, nothing queues up.
+- **Identify now** / tapping the image: one identification right away.
+- Measurements above were taken with an earlier server-side version of the same prompt and schema.

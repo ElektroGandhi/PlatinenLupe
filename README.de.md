@@ -37,22 +37,21 @@ oder dem Werkstattmonitor, nichts zum Zeigen für die Person nebenan.
 
 - 🌐 **Nur der Browser.** Handy, Tablet, Laptop, der alte Monitor an der Werkbank – alles mit Browser.
 - 🏠 **Lokal aus Prinzip.** Das Bild verlässt nie den Raum. Internet braucht es nie, nicht einmal zur Einrichtung.
-- 🛠️ **Selbst verwaltet.** Deine Hardware, deine Firmware, deine Einstellungsseite, dein Server, dein Modell.
+- 🛠️ **Selbst verwaltet.** Deine Hardware, deine Firmware, deine Einstellungsseite, dein Modell. Kein Server, kein Docker.
 - 📡 **Geht ganz ohne Netzwerk.** Der Standardmodus spannt einen eigenen kleinen Hotspot auf. Verbinden – die Lupe ist da.
 - 🔍 **Lokale KI, wenn du willst.** Bauteil antippen, und ein Bildmodell auf *deinem* Rechner sagt, was es ist.
 
-## Drei Modi
+## Zwei Modi
 
-<p align="center"><img src="docs/images/modes.svg" alt="Hotspot (Standard), Heimnetz, Server" width="100%"></p>
+<p align="center"><img src="docs/images/modes.svg" alt="Hotspot (Standard), Heimnetz" width="100%"></p>
 
 | Modus | Du brauchst | Öffnen |
 |---|---|---|
 | **Hotspot** *(Standard)* | USB-Strom. Sonst nichts. | mit `Platinenlupe-XXXX` verbinden → die Seite öffnet sich von selbst |
 | **Heimnetz** | dein WLAN | die Adresse des Boards, steht in seinen Einstellungen (am Computer: `http://platinenlupe.local`) |
-| **Server** | einen Docker-Rechner oder Raspberry Pi + ein lokales Bildmodell | `http://<server>:8080` |
 
-Umgeschaltet wird auf der Einstellungsseite des Geräts. Jeder Modus enthält die volle Ansicht; der Server ergänzt nur
-die Bauteil-Bestimmung. Einzelheiten: [docs/modes.md](docs/modes.md).
+Umgeschaltet wird auf der Einstellungsseite des Geräts. Beide Modi enthalten die volle Ansicht; im Heimnetz bestimmt die
+Seite zusätzlich Bauteile mit einem Bildmodell, das du ohnehin betreibst (LM Studio, Ollama). Einzelheiten: [docs/modes.md](docs/modes.md).
 
 ## Was sie kann
 
@@ -62,7 +61,7 @@ die Bauteil-Bestimmung. Einzelheiten: [docs/modes.md](docs/modes.md).
 | **Gerade halten** | der Lagesensor der Lupe hält das Bild aufrecht; die Ansicht wird ein rundes Bullauge, damit sich keine Ecken drehen |
 | **Lichtring** | 0–100 % von der Seite aus, bleibt auch nach einem Neustart der Lupe erhalten |
 | **Spiegeln · Standbild · Zoom 1×/2×/4× · Foto speichern** | was man an der Werkbank wirklich braucht |
-| **Bauteil im Fokus** *(Server)* | antippen → Widerstand / Kondensator / IC / SOT-23 / LED / Durchkontaktierung …, Bauform, Aufdruck, Wert, Sicherheit |
+| **Bauteil im Fokus** *(Heimnetz)* | antippen → Widerstand / Kondensator / IC / SOT-23 / LED / Durchkontaktierung …, Bauform, Aufdruck, Wert, Sicherheit |
 | **Zweisprachig** | Deutsch und Englisch, je nach Browser |
 | **Einstellungen im Gerät** | Modus, WLAN, Hotspot-Passwort – Passwörter verlassen nie das Board |
 | **Demo eingebaut** | `web/index.html` direkt öffnen: eine erfundene Platine, die ganze Oberfläche, keine Hardware |
@@ -98,7 +97,8 @@ ESP32 VIN          ◄── NodeMCU VU   (ein USB-Kabel am NodeMCU versorgt bei
 **4 · Schauen** – Lupe einschalten, mit dem WLAN `Platinenlupe-XXXX` verbinden (Passwort `platinenlupe`), die Seite
 öffnet sich. Unter *Geräte-Einstellungen* das Passwort ändern.
 
-Bauteil-Bestimmung gewünscht? → [server/](server/) – `docker compose up -d` und auf LM Studio oder Ollama zeigen.
+Bauteil-Bestimmung gewünscht? Auf *Heimnetz* umstellen, unter *Geräte-Einstellungen* die Adresse von LM Studio oder
+Ollama eintragen, dort CORS erlauben – fertig. → [docs/identification.md](docs/identification.md)
 
 ## Wie es funktioniert
 
@@ -107,9 +107,7 @@ flowchart LR
   L["🔍 Lupe<br/>nur eigenes WLAN"] -- "BLE-Weckruf<br/>WLAN + UDP" --> A["ESP32<br/>Lupenseite"]
   A -- "3 Drähte · UART 1 Mbaud<br/>ganze Bilder, CRC" --> B["NodeMCU / ESP32<br/>Hausseite"]
   B -- "Hotspot / Heim-WLAN" --> P["📱 jeder Browser"]
-  B -. "Servermodus<br/>UDP-Weiterleitung + Rundruf" .-> S["🖥️ Server"]
-  S -- "WebSocket" --> P
-  S -- "Fokus-Ausschnitt" --> M["🧠 lokales Bildmodell"]
+  P -. "Heimnetz: Fokus-Ausschnitt" .-> M["🧠 dein Bildmodell<br/>LM Studio · Ollama"]
 ```
 
 Die Lupe besteht auf **ihrem eigenen** WLAN und kann sich nicht in deins einbuchen – und ein Handy ist immer nur in
@@ -123,8 +121,9 @@ Das Protokoll stammt aus der App und der Kamera-Firmware und ist am Gerät nachg
 
 ## Bauteil-Bestimmung
 
-Ins Bild tippen setzt den Fokusring auf ein Bauteil. Der Server schneidet die Stelle aus und fragt ein **lokales**
-Bildsprachmodell – LM Studio (nimmt das gerade geladene Bildmodell), Ollama oder einen OpenAI-kompatiblen Server.
+Ins Bild tippen setzt den Fokusring auf ein Bauteil. Dein Browser schneidet die Stelle aus und fragt ein **lokales**
+Bildsprachmodell direkt – LM Studio (nimmt das gerade geladene Bildmodell), Ollama oder einen OpenAI-kompatiblen
+Server. Das Board speichert nur die Adresse des Modells; ein eigener Server sitzt nicht dazwischen.
 
 | Modell (5 echte Bauteile) | Art richtig | Antwortzeit |
 |---|---|---|
@@ -148,15 +147,15 @@ OpenSCAD-Quelle, STL und fertige 3MF: [enclosure/](enclosure/).
 | | Stand |
 |---|---|
 | Protokoll an der echten Lupe (TXW810, Fw 125): ~16 B/s, 0 kaputte Bilder, Licht 0–100 %, 60 s ohne Aussetzer | ✅ gemessen |
-| Server Ende zu Ende mit Simulator und 3 % Paketverlust: 0 kaputte Bilder | ✅ gemessen |
 | Bauteil-Bestimmung an echten Lupenbildern | ✅ gemessen (Tabelle oben) |
 | UART-Rahmen samt CRC-Fehlern und Wiederaufsetzen | ✅ Unit-Test |
-| Alle drei Firmwares bauen (ESP32, ESP8266, ESP32 als Hausseite) | ✅ CI |
-| Seite auf Handy und Desktop, Deutsch und Englisch, Gerät / Server / Demo | ✅ Headless-Browser |
+| Alle drei Firmware-Varianten bauen (ESP32 Lupenseite, ESP8266 und ESP32 als Hausseite) | ✅ CI |
+| Seite auf Handy und Desktop, Deutsch und Englisch, Gerät / Demo | ✅ Headless-Browser |
 | Hotspot-Modus am echten NodeMCU: WPA2-Hotspot, Captive-Portal-Umleitung, Seite 15/15 vollständig, Einstellungen, WLAN-Suche, Verbindung zum ESP32 | ✅ gemessen |
 | Ganze Kette an echter Hardware im Hotspot-Modus: Lupe → ESP32 → NodeMCU → Browser, 4,8 B/s, 0 Aussetzer in 30 s; Neustarts der Lupe werden überbrückt | ✅ gemessen |
 | Schwacher Funk (Lupe bei −75 dBm): 3,4 B/s gleichmäßig über 3 min, 0 Kabelfehler (bei 2 Mbaud fror das Bild im Kreis ein – jetzt 1 Mbaud) | ✅ gemessen |
-| Heimnetz- und Servermodus an der Hardware | ⏳ in Arbeit |
+| Heimnetz-Modus an der Hardware; Einstellungen überstehen das Firmware-Update | ✅ gemessen |
+| Bauteil-Bestimmung aus dem Browser gegen LM Studio | ⏳ in Arbeit |
 | Gedrucktes Gehäuse | ⏳ noch nicht gedruckt |
 
 ## Häufige Fragen
@@ -181,7 +180,7 @@ ein PC mit Ollama klappt gut; kleine Modelle antworten schnell, raten aber öfte
 
 - [rbeilvert/otoscope](https://github.com/rbeilvert/otoscope) – der freie Viewer, der zeigte, dass diese Familie zu befreien ist.
 - [ESP Web Tools](https://esphome.github.io/esp-web-tools/), [NimBLE-Arduino](https://github.com/h2zero/NimBLE-Arduino),
-  [aiohttp](https://github.com/aio-libs/aiohttp), [Pillow](https://python-pillow.org), [OpenSCAD](https://openscad.org).
+  [OpenSCAD](https://openscad.org).
 
 Keine Verbindung zu den Herstellern der Kamera oder der App EarVision. Marken gehören ihren Inhabern. Das Projekt dient
 der Interoperabilität: Es verändert die Kamera nicht und enthält keinen Herstellercode.

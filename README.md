@@ -38,22 +38,21 @@ on a laptop or a bench monitor, no way to show the person next to you.
 
 - 🌐 **Browser only.** Phone, tablet, laptop, the old monitor on the bench — anything with a browser.
 - 🏠 **Local by design.** The image never leaves your room. No internet connection is ever needed, not even for setup.
-- 🛠️ **Self-managed.** Your hardware, your firmware, your settings page, your server, your model.
+- 🛠️ **Self-managed.** Your hardware, your firmware, your settings page, your model. No server, no Docker.
 - 📡 **Works with no network at all.** The default mode opens its own little hotspot. Join it — the loupe pops up.
 - 🔍 **Optional local AI.** Tap a part and a vision model on *your* machine tells you what it is.
 
-## Three modes
+## Two modes
 
-<p align="center"><img src="docs/images/modes.svg" alt="Hotspot (default), home network, server" width="100%"></p>
+<p align="center"><img src="docs/images/modes.svg" alt="Hotspot (default), home network" width="100%"></p>
 
 | Mode | You need | Open |
 |---|---|---|
 | **Hotspot** *(default)* | USB power. That's it. | join `Platinenlupe-XXXX` → the page opens by itself |
 | **Home network** | your WiFi | the board's address, shown on its settings page (computers: `http://platinenlupe.local`) |
-| **Server** | any Docker host or Raspberry Pi + a local vision model | `http://<server>:8080` |
 
-Switch on the device's own settings page. Every mode includes the full viewer; the server only adds
-identification. Details: [docs/modes.md](docs/modes.md).
+Switch on the device's own settings page. Both modes include the full viewer; in your home network the page can also
+identify parts with a vision model you already run (LM Studio, Ollama). Details: [docs/modes.md](docs/modes.md).
 
 ## Features
 
@@ -63,9 +62,9 @@ identification. Details: [docs/modes.md](docs/modes.md).
 | **Straighten** | the loupe's motion sensor keeps the picture upright; the view becomes a round porthole so nothing spins in the corners |
 | **Light ring** | 0–100 % from the page, kept alive across restarts of the loupe |
 | **Mirror · Freeze · Zoom 1×/2×/4× · Save photo** | the things you actually need at the bench |
-| **Part in focus** *(server)* | tap → resistor / capacitor / IC / SOT-23 / LED / via …, package, marking, value, confidence |
+| **Part in focus** *(home network)* | tap → resistor / capacitor / IC / SOT-23 / LED / via …, package, marking, value, confidence |
 | **Bilingual** | English and German, picked from your browser |
-| **Settings on the device** | mode, WiFi, hotspot password — passwords never leave the board |
+| **Settings on the device** | mode, WiFi, hotspot password, vision model — passwords never leave the board |
 | **Demo built in** | open `web/index.html` from disk: a synthetic board, the full UI, no hardware |
 
 <p align="center">
@@ -100,7 +99,8 @@ ESP32 VIN          ◄── NodeMCU VU   (one USB cable on the NodeMCU powers b
 **4 · Look** — switch the loupe on, join WiFi `Platinenlupe-XXXX` (password `platinenlupe`), and the page opens.
 Change the password under *Device settings*.
 
-Want part identification? → [server/](server/) — `docker compose up -d` and point it at LM Studio or Ollama.
+Want part identification? Switch to *Home network*, enter your LM Studio or Ollama address under *Device settings*,
+allow CORS there — done. → [docs/identification.md](docs/identification.md)
 
 ## How it works
 
@@ -109,9 +109,7 @@ flowchart LR
   L["🔍 Loupe<br/>own WiFi only"] -- "BLE wake-up<br/>WiFi + UDP" --> A["ESP32<br/>loupe side"]
   A -- "3 wires · UART 1 Mbaud<br/>whole frames, CRC" --> B["NodeMCU / ESP32<br/>home side"]
   B -- "Hotspot / home WiFi" --> P["📱 any browser"]
-  B -. "server mode<br/>UDP relay + broadcast" .-> S["🖥️ server"]
-  S -- "WebSocket" --> P
-  S -- "focus crop" --> M["🧠 local vision model"]
+  P -. "home network: focus crop" .-> M["🧠 your vision model<br/>LM Studio · Ollama"]
 ```
 
 The loupe insists on running **its own** WiFi and cannot join yours — and a phone can only be in one WiFi at a time.
@@ -124,8 +122,9 @@ The protocol was reverse-engineered from the app and the camera firmware and mea
 
 ## Part identification
 
-Tap the picture to drop the focus ring on a part. The server crops that spot and asks a **local** vision-language
-model — LM Studio (uses whatever vision model is loaded), Ollama, or any OpenAI-compatible server.
+Tap the picture to drop the focus ring on a part. Your browser crops that spot and asks a **local** vision-language
+model directly — LM Studio (uses whatever vision model is loaded), Ollama, or any OpenAI-compatible server. The
+board only stores the model's address; there is no server of ours in between.
 
 | Model (5 real parts) | Part type right | Answer time |
 |---|---|---|
@@ -149,23 +148,22 @@ OpenSCAD source, STL and a ready 3MF: [enclosure/](enclosure/).
 | | Status |
 |---|---|
 | Protocol on the real loupe (TXW810, fw 125): ~16 fps, 0 broken frames, light 0–100 %, 60 s without a gap | ✅ measured |
-| Server end-to-end with the simulator and 3 % packet loss: 0 broken frames | ✅ measured |
 | Part identification on real loupe images | ✅ measured (table above) |
 | UART framing incl. CRC errors and resync | ✅ unit test |
-| All three firmwares build (ESP32, ESP8266, ESP32 home side) | ✅ CI |
-| Page on phone and desktop, English and German, device / server / demo | ✅ headless browser |
+| All three firmware builds (ESP32 loupe side, ESP8266 and ESP32 home side) | ✅ CI |
+| Page on phone and desktop, English and German, device / demo | ✅ headless browser |
 | Hotspot mode on a real NodeMCU: WPA2 hotspot, captive-portal redirect, page 15/15 complete, settings, WiFi scan, link to the ESP32 | ✅ measured |
 | Whole chain on real hardware in hotspot mode: loupe → ESP32 → NodeMCU → browser, 4.8 fps, 0 misses in 30 s; loupe restarts are recovered | ✅ measured |
 | Weak signal (loupe at −75 dBm): 3.4 fps steady for 3 min, 0 link errors (at 2 Mbaud it froze in a loop — now 1 Mbaud) | ✅ measured |
-| Home-network and server mode on hardware | ⏳ in progress |
+| Home-network mode on hardware; settings kept across the firmware update | ✅ measured |
+| Part identification from the browser against LM Studio | ⏳ in progress |
 | Printed case | ⏳ not printed yet |
 
 ## Repository
 
 ```
 firmware/    ESP32 loupe side, ESP8266/ESP32 home side (PlatformIO), UART framing + test
-web/         the one page — device, server and demo; no dependencies, works offline
-server/      optional Python server: discovery, WebSocket stream, identification, simulator
+web/         the one page — device and demo, part identification in the browser; no dependencies
 enclosure/   OpenSCAD case, build + collision check, STL/3MF        (CC BY-SA 4.0)
 flasher/     browser flasher (ESP Web Tools)
 docs/        modes, hardware, protocol, identification, reverse engineering
@@ -193,7 +191,7 @@ with Ollama works well; small models answer fast but guess more.
 
 - [rbeilvert/otoscope](https://github.com/rbeilvert/otoscope) — the open viewer that proved this family can be freed.
 - [ESP Web Tools](https://esphome.github.io/esp-web-tools/), [NimBLE-Arduino](https://github.com/h2zero/NimBLE-Arduino),
-  [aiohttp](https://github.com/aio-libs/aiohttp), [Pillow](https://python-pillow.org), [OpenSCAD](https://openscad.org).
+  [OpenSCAD](https://openscad.org).
 
 Not affiliated with the makers of the camera or the EarVision app. All trademarks belong to their owners. This
 project exists for interoperability: it does not modify the camera and contains no vendor code.

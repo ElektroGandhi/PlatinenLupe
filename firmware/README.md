@@ -5,7 +5,7 @@ Two small programs for two cheap boards, joined by three wires.
 | Board | Firmware | Job |
 |---|---|---|
 | **ESP32** (any classic ESP32 DevKit / WROOM-32) | `loupe_side` | Finds the loupe over Bluetooth, wakes it, joins the loupe's own WiFi, assembles every video frame and passes it over the cable. |
-| **NodeMCU v3** (ESP8266) — or a second ESP32 | `home_side_esp8266` / `home_side_esp32` | Serves the web page — as its own hotspot, in your home network, or as a relay for your server. |
+| **NodeMCU v3** (ESP8266) — or a second ESP32 | `home_side_esp8266` / `home_side_esp32` | Serves the web page — as its own hotspot or in your home network. |
 
 Why two boards? The loupe always opens its **own** WiFi and cannot join yours. One ESP has one radio, so one
 board stays with the loupe and the other one talks to you. Only the ESP32 has Bluetooth, which is needed to wake
@@ -27,7 +27,7 @@ pio run -e home_side_esp32   -t upload
 
 Flash one board at a time and unplug the 5 V wire between the boards while flashing (see [power](../docs/hardware.md#power)).
 The home side embeds `../web/index.html` at build time (`scripts/embed_page.py`), so the page on the device is
-always the same page the server serves.
+always the same page as the demo.
 
 ## Wiring
 
@@ -66,11 +66,11 @@ the board starts in hotspot mode with the default password.
 | Method | Path | |
 |---|---|---|
 | GET | `/` | the page (gzip) |
-| GET | `/api/state` | JSON: `device`, `mode`, `stage`, `code`, battery, light, link statistics |
+| GET | `/api/state` | JSON: `device`, `mode`, `stage`, `code`, battery, light, model address, link statistics |
 | GET | `/api/frame.jpg` | next complete frame; header `X-Angle` = rotation in degrees |
 | POST | `/api/light` | `v=0…100` |
-| GET | `/api/settings` | mode, hotspot name, WiFi name — **never passwords** |
-| POST | `/api/settings` | `mode`, `wifi_ssid`, `wifi_password`, `ap_password` → saves and restarts |
+| GET | `/api/settings` | mode, hotspot name, WiFi name, model address — **never passwords** |
+| POST | `/api/settings` | `mode` (`hotspot`/`home`), `wifi_ssid`, `wifi_password`, `ap_password`, `model_url`, `model_name` → saves and restarts |
 | GET | `/api/scan` | nearby WiFi networks |
 
 ## Tests
@@ -92,8 +92,8 @@ Covers good frames, a flipped bit (CRC error), an oversized length and resynchro
 
 The loupe delivers ~16 frames/s of up to 21 KB. Sent non-stop at 2 Mbaud, the ESP8266 could not keep up next to
 its WiFi: its 128-byte UART FIFO overflowed and almost every frame arrived broken (measured: 1310 CRC errors,
-0 frames). Now the home side grants frames one at a time (`READY`): one when its frame buffer is empty, up to
-10/s in server mode. The loupe side only sends a whole frame when it holds a grant.
+0 frames). Now the home side grants frames one at a time (`READY`): one when its frame buffer is empty.
+The loupe side only sends a whole frame when it holds a grant.
 
 Measured on real hardware (NodeMCU in hotspot mode, loupe at −49 dBm): **4.8 frames/s**, 0 misses and 0 CRC errors in 30 s.
 The single frame buffer of the ESP8266 is the limit; a second ESP32 as home side has room for more.

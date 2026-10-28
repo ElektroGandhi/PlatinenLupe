@@ -1,15 +1,14 @@
-// Home side (ESP8266 NodeMCU or a second ESP32): serves the loupe to browsers. Three modes:
+// Home side (ESP8266 NodeMCU or a second ESP32): serves the loupe to browsers. Two modes:
 //
 //   hotspot  (default) Opens its own WiFi "Platinenlupe-XXXX" (WPA2). Join it with any phone or laptop and the
 //            loupe opens by itself (captive portal) at http://192.168.4.1. No router, no internet, no app.
-//   home     Joins your WiFi and serves the same page at http://platinenlupe.local (or its IP).
-//            It also broadcasts on UDP 61499, so a server can find it and change its settings.
-//   server   Like home, and additionally behaves like the loupe itself on UDP 61500/61501 for a self-hosted
-//            server (server/ in this repo) that adds component identification. It finds the board through a
-//            broadcast on UDP 61499. The built-in page keeps working at the same time.
+//   home     Joins your WiFi and serves the same page at its address (computers also: http://platinenlupe.local).
 //
-// If home or server mode cannot reach the configured WiFi within 30 s, the hotspot opens as well, so the
-// settings are always reachable. Hold FLASH/BOOT for 5 s right after power-on to reset to factory settings.
+// Part identification needs no server: the browser cuts out the focus ring and asks a vision model in your
+// network directly (LM Studio, Ollama, OpenAI-compatible). The board only stores the model's address.
+//
+// If home mode cannot reach the configured WiFi within 30 s, the hotspot opens as well, so the settings are
+// always reachable. Hold FLASH/BOOT for 5 s right after power-on to reset to factory settings.
 //
 // UART to the loupe side:
 //   ESP8266: Serial.swap() moves UART0 to D7 = GPIO13 (RX) and D8 = GPIO15 (TX). Logs go to Serial1 (D4).
@@ -18,7 +17,6 @@
 #include <Arduino.h>
 #include <DNSServer.h>
 #include <EEPROM.h>
-#include <WiFiUdp.h>
 
 #if defined(ESP8266)
 #include <ESP8266WebServer.h>
@@ -52,15 +50,14 @@ using WebServerT = WebServer;
 #endif
 #define PIN_RESET 0  // FLASH / BOOT button
 
-static const char* FW_VERSION = "1.0.0";
+static const char* FW_VERSION = "1.1.0";
 static const char* DEFAULT_AP_PASSWORD = "platinenlupe";
 static const char* HOSTNAME = "platinenlupe";
-static const uint16_t PORT_VIDEO = 61501, PORT_CONTROL = 61500, PORT_BEACON = 61499;
 static const uint8_t VIDEO_START[] = {0x20, 0x01}, VIDEO_STOP[] = {0x20, 0x02}, HEARTBEAT[] = {0x10, 0x01};
 
 // ---- Settings (EEPROM) ---------------------------------------------------------------------
-enum Mode : uint8_t { HOTSPOT = 0, HOME = 1, SERVER = 2 };
-static const char* MODE_NAMES[] = {"hotspot", "home", "server"};
+enum Mode : uint8_t { HOTSPOT = 0, HOME = 1 };
+static const char* MODE_NAMES[] = {"hotspot", "home"};
 
 struct Settings {
   uint32_t magic;
@@ -68,10 +65,22 @@ struct Settings {
   char apPassword[64];
   char wifiSsid[33];
   char wifiPassword[64];
+  char modelUrl[96];         // e.g. http://192.168.1.20:1234 — empty: no part identification
+  char modelName[64];        // empty: LM Studio picks the loaded vision model
   uint16_t crc;
 };
-static const uint32_t SETTINGS_MAGIC = 0x504C5531;   // "PLU1"
+static const uint32_t SETTINGS_MAGIC = 0x504C5532;   // "PLU2"
 static Settings cfg;
+
+// Firmware 1.0 stored this layout ("PLU1", with a third mode "server"). Read it once so that an update keeps the WiFi.
+struct SettingsV1 {
+  uint32_t magic;
+  uint8_t mode;
+  char apPassword[64];
+  char wifiSsid[33];
+  char wifiPassword[64];
+  uint16_t crc;
+};
 
 static void settingsDefaults() {
   memset(&cfg, 0, sizeof cfg);
@@ -82,21 +91,34 @@ static void settingsDefaults() {
 
 static uint16_t settingsCrc() { return frame::crc16((const uint8_t*)&cfg, offsetof(Settings, crc)); }
 
-static void settingsLoad() {
-  EEPROM.begin(sizeof(Settings));
-  EEPROM.get(0, cfg);
-  if (cfg.magic != SETTINGS_MAGIC || cfg.crc != settingsCrc() || cfg.mode > SERVER) settingsDefaults();
-  cfg.apPassword[63] = cfg.wifiSsid[32] = cfg.wifiPassword[63] = 0;
-}
-
 static void settingsSave() {
   cfg.crc = settingsCrc();
   EEPROM.put(0, cfg);
   EEPROM.commit();
 }
 
+static void settingsLoad() {
+  EEPROM.begin(sizeof(Settings));
+  EEPROM.get(0, cfg);
+  if (cfg.magic == SETTINGS_MAGIC && cfg.crc == settingsCrc() && cfg.mode <= HOME) {
+    cfg.apPassword[63] = cfg.wifiSsid[32] = cfg.wifiPassword[63] = cfg.modelUrl[95] = cfg.modelName[63] = 0;
+    return;
+  }
+  SettingsV1 old;
+  EEPROM.get(0, old);
+  bool oldOk = old.magic == 0x504C5531 &&
+               old.crc == frame::crc16((const uint8_t*)&old, offsetof(SettingsV1, crc)) && old.mode <= 2;
+  settingsDefaults();
+  if (!oldOk) return;
+  cfg.mode = old.mode == HOTSPOT ? HOTSPOT : HOME;   // "server" became "home"
+  memcpy(cfg.apPassword, old.apPassword, sizeof cfg.apPassword);
+  memcpy(cfg.wifiSsid, old.wifiSsid, sizeof cfg.wifiSsid);
+  memcpy(cfg.wifiPassword, old.wifiPassword, sizeof cfg.wifiPassword);
+  cfg.apPassword[63] = cfg.wifiSsid[32] = cfg.wifiPassword[63] = 0;
+  settingsSave();
+}
+
 // ---- Link to the loupe side ----------------------------------------------------------------
-static WiFiUDP udpVideo, udpControl, udpBeacon;
 static WebServerT web(80);
 static DNSServer dns;
 static frame::Reader reader;
@@ -104,7 +126,7 @@ static uint8_t linkBuf[frame::MAX_PAYLOAD + frame::OVERHEAD];
 
 static String apSsid;
 static bool apOn = false, staOn = false, fallback = false;
-static uint32_t linkFull = 0, udpErrors = 0, overruns = 0;   // overruns: bytes lost before the reader saw them
+static uint32_t linkFull = 0, overruns = 0;          // overruns: bytes lost before the reader saw them
 
 static void toLoupe(uint8_t type, const uint8_t* d, size_t n) {
   if (n > frame::MAX_PAYLOAD) return;
@@ -113,32 +135,7 @@ static void toLoupe(uint8_t type, const uint8_t* d, size_t n) {
   else linkFull++;
 }
 
-// ---- Server mode: relay UDP --------------------------------------------------------------------
-static IPAddress peerVideo, peerControl;
-static uint16_t peerVideoPort = 0, peerControlPort = 0;
-static uint32_t lastServerRequest = 0;
-
-static bool serverWatching() { return cfg.mode == SERVER && millis() - lastServerRequest < 5000; }
-
-static void relayIn(WiFiUDP& udp, uint8_t type, IPAddress& peer, uint16_t& port) {
-  int n;
-  while ((n = udp.parsePacket()) > 0) {
-    peer = udp.remoteIP(); port = udp.remotePort(); lastServerRequest = millis();
-    uint8_t d[frame::MAX_PAYLOAD];
-    if (n > (int)sizeof d) { udp.flush(); continue; }
-    udp.read(d, n);
-    toLoupe(type, d, n);
-  }
-}
-
-static void relayOut(WiFiUDP& udp, IPAddress peer, uint16_t port) {
-  if (!port || !serverWatching()) return;   // nobody listening: save airtime
-  if (!udp.beginPacket(peer, port)) { udpErrors++; return; }
-  udp.write(reader.data, reader.len);
-  if (!udp.endPacket()) udpErrors++;
-}
-
-// ---- Built-in page: one frame buffer -------------------------------------------------------
+// ---- One frame buffer ------------------------------------------------------------------------
 // The next frame is only collected once the previous one was fetched. The browser's fetch rate thus
 // paces the frame rate, and no second buffer is needed (the ESP8266 has too little RAM for two).
 static const size_t FRAME_MAX = 24 * 1024;           // measured: 6–21 KB per frame
@@ -182,10 +179,8 @@ static void readLink(uint32_t waitMs = 0) {
     while (LINK.available() && n++ < 4096) {
       if (!reader.feed(LINK.read())) continue;
       if (reader.type == frame::VIDEO) {
-        relayOut(udpVideo, peerVideo, peerVideoPort);
         frameChunk(reader.data, reader.len);
       } else if (reader.type == frame::CONTROL) {
-        relayOut(udpControl, peerControl, peerControlPort);
         int a = -1;
         for (int i = 0; i < reader.len; i++) if (reader.data[i] == '{') { a = i; break; }
         if (a >= 0) { telemetry = ""; telemetry.concat((const char*)reader.data + a, reader.len - a); }
@@ -261,6 +256,7 @@ static void sendState() {
   j += FW_VERSION; j += "\",\"mode\":\""; j += MODE_NAMES[cfg.mode];
   j += "\",\"fallback\":"; j += fallback ? "true" : "false";
   j += ",\"stage\":\""; j += stage; j += "\",\"code\":\""; j += code; j += "\",\"light\":"; j += light;
+  j += ",\"model_url\":" + jsonString(cfg.modelUrl) + ",\"model_name\":" + jsonString(cfg.modelName);
   if ((w = jsonField(t, "battery_percentage")).length()) {
     j += ",\"battery\":" + w;
     w = jsonField(t, "battery_charging");
@@ -272,7 +268,6 @@ static void sendState() {
   if ((w = jsonField(t, "fps")).length()) j += ",\"camera_fps\":" + w;
   if ((w = jsonField(t, "debug_rssi")).length()) j += ",\"loupe_rssi\":" + w;
   j += ",\"ip\":\"" + (staOn ? WiFi.localIP().toString() : WiFi.softAPIP().toString()) + "\"";
-  j += ",\"server_watching\":"; j += serverWatching() ? "true" : "false";
   j += ",\"link\":{\"a\":" + (aFresh ? sideA : String("null"));
   j += ",\"b\":{\"rssi\":" + String(staOn ? WiFi.RSSI() : 0) + ",\"crc\":" + reader.crc_errors +
        ",\"heap\":" + ESP.getFreeHeap() + ",\"served\":" + framesServed + ",\"too_big\":" + tooBig +
@@ -315,6 +310,7 @@ static void sendSettings() {
   j += ",\"ap_default_password\":"; j += strcmp(cfg.apPassword, DEFAULT_AP_PASSWORD) == 0 ? "true" : "false";
   j += ",\"wifi_ssid\":" + jsonString(cfg.wifiSsid);
   j += ",\"wifi_password_set\":"; j += cfg.wifiPassword[0] ? "true" : "false";
+  j += ",\"model_url\":" + jsonString(cfg.modelUrl) + ",\"model_name\":" + jsonString(cfg.modelName);
   j += ",\"hostname\":\""; j += HOSTNAME; j += ".local\"}";
   web.sendHeader("Cache-Control", "no-store");
   web.send(200, "application/json", j);
@@ -324,11 +320,17 @@ static void error(const char* code) { web.send(400, "application/json", String("
 
 static void saveSettings() {
   String mode = web.arg("mode"), ssid = web.arg("wifi_ssid"), pass = web.arg("wifi_password"), ap = web.arg("ap_password");
-  int m = mode == "home" ? HOME : mode == "server" ? SERVER : mode == "hotspot" ? HOTSPOT : -1;
+  String murl = web.arg("model_url"), mname = web.arg("model_name");
+  murl.trim(); mname.trim();
+  while (murl.endsWith("/")) murl.remove(murl.length() - 1);
+  int m = mode == "home" ? HOME : mode == "hotspot" ? HOTSPOT : -1;
   if (m < 0) return error("mode");
   if (m != HOTSPOT && ssid.isEmpty() && !cfg.wifiSsid[0]) return error("wifi_ssid");
   if (ssid.length() > 32 || pass.length() > 63) return error("wifi_length");
   if (ap.length() && (ap.length() < 8 || ap.length() > 63)) return error("ap_password");
+  if (murl.length() && (murl.length() > 95 || !(murl.startsWith("http://") || murl.startsWith("https://"))))
+    return error("model_url");
+  if (mname.length() > 63) return error("model_name");
   cfg.mode = m;
   if (ssid.length()) {
     if (ssid != cfg.wifiSsid) memset(cfg.wifiPassword, 0, sizeof cfg.wifiPassword);   // new network, new password
@@ -336,6 +338,9 @@ static void saveSettings() {
   }
   if (pass.length()) strncpy(cfg.wifiPassword, pass.c_str(), sizeof cfg.wifiPassword - 1);
   if (ap.length()) { memset(cfg.apPassword, 0, sizeof cfg.apPassword); strncpy(cfg.apPassword, ap.c_str(), sizeof cfg.apPassword - 1); }
+  // The model fields are always sent by the page; empty clears them.
+  if (web.hasArg("model_url")) { memset(cfg.modelUrl, 0, sizeof cfg.modelUrl); strncpy(cfg.modelUrl, murl.c_str(), sizeof cfg.modelUrl - 1); }
+  if (web.hasArg("model_name")) { memset(cfg.modelName, 0, sizeof cfg.modelName); strncpy(cfg.modelName, mname.c_str(), sizeof cfg.modelName - 1); }
   settingsSave();
   web.send(200, "application/json", "{\"ok\":true,\"restart\":true}");
   delay(300);
@@ -366,21 +371,17 @@ static void notFound() {
   web.send(404, "text/plain", "not found");
 }
 
-// ---- Flow control: ask the loupe side for whole frames only when there is room for them --------
-// Built-in page: one frame when the buffer is empty (again after 400 ms if it got lost on the way).
-// Server mode: up to 10 frames/s while the server watches.
-
+// ---- Flow control: ask the loupe side for one whole frame when the buffer is empty ----------
+// (again after 400 ms if it got lost on the way)
 static void grantFrames() {
   uint32_t now = millis();
-  bool forPage = viewerActive() && imgState == EMPTY && now - lastGrant >= 400;
-  bool forServer = serverWatching() && now - lastGrant >= 100;
-  if (!forPage && !forServer) return;
+  if (!viewerActive() || imgState != EMPTY || now - lastGrant < 400) return;
   uint8_t n = 1;
   toLoupe(frame::READY, &n, 1);
   lastGrant = now;
 }
 
-// ---- Keep the loupe awake while somebody watches the built-in page --------------------------
+// ---- Keep the loupe awake while somebody watches --------------------------------------------
 static void localTick() {
   static uint32_t last = 0, n = 0;
   static bool wasActive = false;
@@ -393,27 +394,9 @@ static void localTick() {
     if (n++ % 5 == 1) { uint8_t b[] = {0x10, 0x03, light, 0x00}; toLoupe(frame::CONTROL, b, sizeof b); }
     wasActive = true;
   } else if (wasActive && millis() - lastViewer > 30000) {
-    if (!serverWatching())                          // only stop if no server is watching either
-      for (int i = 0; i < 3; i++) toLoupe(frame::VIDEO, VIDEO_STOP, sizeof VIDEO_STOP);
+    for (int i = 0; i < 3; i++) toLoupe(frame::VIDEO, VIDEO_STOP, sizeof VIDEO_STOP);
     wasActive = false; imgState = EMPTY;
   }
-}
-
-static void beacon() {
-  bool aFresh = millis() - lastSideA < 5000;
-  char b[200];
-  snprintf(b, sizeof b,
-           "\"b\":{\"rssi\":%d,\"crc\":%u,\"link_full\":%u,\"udp_errors\":%u,\"uptime\":%lu,\"web\":true}",
-           WiFi.RSSI(), reader.crc_errors, linkFull, udpErrors, millis() / 1000);
-  String s = String("{\"device\":\"platinenlupe\",\"v\":2,\"firmware\":\"") + FW_VERSION + "\",\"mode\":\"" +
-             MODE_NAMES[cfg.mode] + "\",\"a\":" +
-             (aFresh ? sideA : "null") + "," + b + "}";
-  IPAddress bc = WiFi.localIP();
-  IPAddress mask = WiFi.subnetMask();
-  for (int i = 0; i < 4; i++) bc[i] = bc[i] | ~mask[i];
-  udpBeacon.beginPacket(bc, PORT_BEACON);
-  udpBeacon.write((const uint8_t*)s.c_str(), s.length());
-  udpBeacon.endPacket();
 }
 
 // ---- WiFi ------------------------------------------------------------------------------------
@@ -498,13 +481,6 @@ void setup() {
   if (!img) imgCapacity = 0;
   LOG.printf("Frame buffer %u B, free heap %u B\n", imgCapacity, ESP.getFreeHeap());
 
-  if (cfg.mode == SERVER) {
-    udpVideo.begin(PORT_VIDEO);
-    udpControl.begin(PORT_CONTROL);
-  }
-  // The beacon goes out in home and server mode: a server finds the board either way and can change its
-  // settings; only server mode relays the image to it.
-  if (cfg.mode != HOTSPOT) udpBeacon.begin(PORT_BEACON + 1);   // send only; own port so no echo arrives
   web.on("/", sendPage);
   web.on("/api/state", sendState);
   web.on("/api/frame.jpg", sendFrame);
@@ -522,10 +498,6 @@ void setup() {
 
 void loop() {
   if (apOn) dns.processNextRequest();
-  if (cfg.mode == SERVER && staOn) {
-    relayIn(udpVideo, frame::VIDEO, peerVideo, peerVideoPort);
-    relayIn(udpControl, frame::CONTROL, peerControl, peerControlPort);
-  }
   readLink();
   grantFrames();
   web.handleClient();
@@ -533,14 +505,9 @@ void loop() {
   if (staOn) MDNS.update();
 #endif
   localTick();
-  static uint32_t lastBeacon = 0;
-  if (cfg.mode != HOTSPOT && staOn && millis() - lastBeacon >= 2000) {
-    lastBeacon = millis();
-    beacon();
-  }
   staOn = cfg.mode != HOTSPOT && WiFi.status() == WL_CONNECTED;
   bool lonely = !staOn && !(apOn && WiFi.softAPgetStationNum() > 0);
-  bool on = lonely ? (millis() / 300) % 2 : (serverWatching() || viewerActive());
+  bool on = lonely ? (millis() / 300) % 2 : viewerActive();
   digitalWrite(PIN_LED, on ? LED_ON : !LED_ON);
   yield();
 }
