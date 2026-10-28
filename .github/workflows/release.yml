@@ -1,0 +1,26 @@
+# On a version tag (v1.0.0, …): build all firmwares and attach them to a GitHub release,
+# together with the printable case (STL + 3MF).
+name: release
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install platformio
+      - run: sh firmware/scripts/build_release.sh
+      - run: cd enclosure/print && zip -q ../../platinenlupe-case-${{ github.ref_name }}.zip *.stl *.3mf
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            flasher/firmware/*.bin
+            platinenlupe-case-${{ github.ref_name }}.zip
+          generate_release_notes: true

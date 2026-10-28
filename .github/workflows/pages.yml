@@ -1,0 +1,50 @@
+# Publishes the demo page and the browser flasher (with freshly built firmware) to GitHub Pages.
+# Site layout:  /            the page itself — on *.github.io it starts the demo with a synthetic board
+#               /flasher/    ESP Web Tools flasher, firmware built in this run
+name: pages
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: pio-${{ hashFiles('firmware/platformio.ini') }}
+      - run: pip install platformio
+      - run: sh firmware/scripts/build_release.sh
+      - name: Assemble site
+        run: |
+          mkdir -p site/flasher/firmware
+          cp web/index.html site/index.html
+          cp flasher/index.html flasher/*.json site/flasher/
+          cp flasher/firmware/*.bin site/flasher/firmware/
+          cp -r docs/images site/images
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: site }
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
