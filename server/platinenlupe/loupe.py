@@ -143,10 +143,13 @@ class Loupe:
         now = time.monotonic()
         live = now - self.last_frame < 3
         a = (self.beacon or {}).get("a") if self.target_ip and not self.fixed_ip else None
+        mode = (self.beacon or {}).get("mode", "server") if not self.fixed_ip else None
         if live:
             stage, code = "live", "live"
         elif not self.target_ip:
             stage, code = "error", "no_device"
+        elif mode and mode != "server":
+            stage, code = "wait", "device_home_mode"      # found, but it does not relay the image
         elif self.fixed_ip:
             stage, code = "wait", "direct"
         elif a is None:
@@ -157,5 +160,6 @@ class Loupe:
         return {
             "stage": stage, "code": code, "fps": round(len(self._window) / 2, 1) if live else 0,
             "light": self.light, "ip": self.target_ip, "firmware": (self.beacon or {}).get("firmware"),
+            "device_mode": mode,
             "link": {"a": a, "b": (self.beacon or {}).get("b")}, "dropped": self._assembler.dropped, **self.telemetry,
         }

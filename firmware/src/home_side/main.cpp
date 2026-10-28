@@ -3,6 +3,7 @@
 //   hotspot  (default) Opens its own WiFi "Platinenlupe-XXXX" (WPA2). Join it with any phone or laptop and the
 //            loupe opens by itself (captive portal) at http://192.168.4.1. No router, no internet, no app.
 //   home     Joins your WiFi and serves the same page at http://platinenlupe.local (or its IP).
+//            It also broadcasts on UDP 61499, so a server can find it and change its settings.
 //   server   Like home, and additionally behaves like the loupe itself on UDP 61500/61501 for a self-hosted
 //            server (server/ in this repo) that adds component identification. It finds the board through a
 //            broadcast on UDP 61499. The built-in page keeps working at the same time.
@@ -404,7 +405,8 @@ static void beacon() {
   snprintf(b, sizeof b,
            "\"b\":{\"rssi\":%d,\"crc\":%u,\"link_full\":%u,\"udp_errors\":%u,\"uptime\":%lu,\"web\":true}",
            WiFi.RSSI(), reader.crc_errors, linkFull, udpErrors, millis() / 1000);
-  String s = String("{\"device\":\"platinenlupe\",\"v\":2,\"firmware\":\"") + FW_VERSION + "\",\"a\":" +
+  String s = String("{\"device\":\"platinenlupe\",\"v\":2,\"firmware\":\"") + FW_VERSION + "\",\"mode\":\"" +
+             MODE_NAMES[cfg.mode] + "\",\"a\":" +
              (aFresh ? sideA : "null") + "," + b + "}";
   IPAddress bc = WiFi.localIP();
   IPAddress mask = WiFi.subnetMask();
@@ -499,8 +501,10 @@ void setup() {
   if (cfg.mode == SERVER) {
     udpVideo.begin(PORT_VIDEO);
     udpControl.begin(PORT_CONTROL);
-    udpBeacon.begin(PORT_BEACON + 1);   // send only; own port so no echo arrives
   }
+  // The beacon goes out in home and server mode: a server finds the board either way and can change its
+  // settings; only server mode relays the image to it.
+  if (cfg.mode != HOTSPOT) udpBeacon.begin(PORT_BEACON + 1);   // send only; own port so no echo arrives
   web.on("/", sendPage);
   web.on("/api/state", sendState);
   web.on("/api/frame.jpg", sendFrame);
@@ -530,7 +534,7 @@ void loop() {
 #endif
   localTick();
   static uint32_t lastBeacon = 0;
-  if (cfg.mode == SERVER && staOn && millis() - lastBeacon >= 2000) {
+  if (cfg.mode != HOTSPOT && staOn && millis() - lastBeacon >= 2000) {
     lastBeacon = millis();
     beacon();
   }

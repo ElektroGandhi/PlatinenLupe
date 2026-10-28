@@ -313,12 +313,14 @@ const T = {
     c_first_frame: ["Connected.", "Waiting for the first image …"],
     c_offline: ["Not reachable.", "Is this device still in the right WiFi?"],
     c_direct: ["Waiting for images …", "Talking to the loupe directly."],
+    c_device_home: ["The board is in home-network mode.", "It only sends the image here in Server mode — switch below under Device settings."],
     c_live: ["Live", ""],
     tDemo: "demo with a synthetic board", tDevice: "served by the device", tServer: "served by your server",
     modeHotspot: "Hotspot", modeHome: "Home network", modeServer: "Server", fallback: "fallback hotspot",
     charging: "charging", ago: s => `${s} s ago`, compute: s => `${s} s compute`, busy: "identifying",
     readCheck: " Printed markings and values are often misread — please check them yourself.",
     confidence: { high: "high confidence", medium: "medium confidence", low: "low confidence" },
+    savedServer: (mode, ap) => mode === "hotspot" ? `Saved. The board leaves your network and opens its hotspot “${ap}”.` : "Saved. The board restarts — this page finds it again in a few seconds.",
     failed: "Identification failed", saved: (ssid, url) => `Saved. The device restarts now. ${ssid ? `Join “${ssid}”, then open ${url}.` : `Open ${url} in a moment.`}`,
     err: { mode: "Pick a mode.", wifi_ssid: "Enter the name of your WiFi.", ap_password: "The hotspot password needs 8 to 63 characters.", wifi_length: "WiFi name or password too long.", net: "The device did not answer." },
     scanning: "Scanning …", noNetworks: "No networks found.",
@@ -352,12 +354,14 @@ const T = {
     c_first_frame: ["Verbunden.", "Warte auf das erste Bild …"],
     c_offline: ["Nicht erreichbar.", "Ist dieses Gerät noch im richtigen WLAN?"],
     c_direct: ["Warte auf Bilder …", "Spreche direkt mit der Lupe."],
+    c_device_home: ["Das Board steht im Modus Heimnetz.", "Das Bild kommt hier nur im Modus Server an – unten unter Geräte-Einstellungen umschalten."],
     c_live: ["Live", ""],
     tDemo: "Demo mit einer erfundenen Platine", tDevice: "vom Gerät geliefert", tServer: "von deinem Server geliefert",
     modeHotspot: "Hotspot", modeHome: "Heimnetz", modeServer: "Server", fallback: "Ersatz-Hotspot",
     charging: "lädt", ago: s => `vor ${s} s`, compute: s => `${s} s Rechenzeit`, busy: "bestimme gerade",
     readCheck: " Aufdrucke und Werte liest das Modell oft falsch – bitte selbst prüfen.",
     confidence: { high: "hohe Sicherheit", medium: "mittlere Sicherheit", low: "geringe Sicherheit" },
+    savedServer: (mode, ap) => mode === "hotspot" ? `Gespeichert. Das Board verlässt dein Netz und öffnet seinen Hotspot „${ap}“.` : "Gespeichert. Das Board startet neu – diese Seite findet es in ein paar Sekunden wieder.",
     failed: "Bestimmung fehlgeschlagen", saved: (ssid, url) => `Gespeichert. Das Gerät startet neu. ${ssid ? `Verbinde dich mit „${ssid}“ und öffne ${url}.` : `Öffne gleich ${url}.`}`,
     err: { mode: "Wähle einen Modus.", wifi_ssid: "Gib den Namen deines WLANs ein.", ap_password: "Das Hotspot-Passwort braucht 8 bis 63 Zeichen.", wifi_length: "WLAN-Name oder Passwort zu lang.", net: "Das Gerät hat nicht geantwortet." },
     scanning: "Suche …", noNetworks: "Keine Netze gefunden.",
@@ -445,7 +449,11 @@ function showState(s) {
     mc.lastElementChild.textContent = t("mode" + s.mode[0].toUpperCase() + s.mode.slice(1)) + (s.fallback ? " · " + t("fallback") : "");
   }
   if (s.light != null && Date.now() - lightTouched > 3000) showLight(s.light);
-  if (transport === "server") $("ident").hidden = !s.identify;
+  if (transport === "server") {
+    $("ident").hidden = !s.identify;
+    // the server found a board: offer its settings here (passed through by the server)
+    if (s.ip && s.ip !== settingsFor) { settingsFor = s.ip; settingsBase = "api/device/"; loadSettings(); }
+  }
   if (s.identify) {
     identBusy = s.identify.busy;
     if (s.identify.last && (!lastResult || s.identify.last.time > lastResult.time)) showResult(s.identify.last);
@@ -604,10 +612,15 @@ async function keepAwake() { try { await navigator.wakeLock.request("screen"); }
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") keepAwake(); });
 keepAwake();
 
-// ---- Settings (only when the device serves the page) -------------------------------------
+// ---- Settings: from the device itself, or passed through by the server (api/device/…) ----------
+let settingsBase = "api/", settingsFor = null;
 const modeFields = () => { $("wifiFields").hidden = new FormData($("settings")).get("mode") === "hotspot"; };
 async function loadSettings() {
-  try { deviceSettings = await (await fetch("api/settings", {cache: "no-store"})).json(); } catch (e) { return; }
+  try {
+    const r = await fetch(settingsBase + "settings", {cache: "no-store"});
+    if (!r.ok) return;
+    deviceSettings = await r.json();
+  } catch (e) { return; }
   $("settings").hidden = false;
   $("settings").querySelector(`[name=mode][value=${deviceSettings.mode}]`).checked = true;
   $("wifiSsid").value = deviceSettings.wifi_ssid || "";
@@ -619,7 +632,7 @@ function note(text, kind) { const n = $("settingsMsg"); n.hidden = false; n.clas
 $("bScan").onclick = async () => {
   const b = $("bScan"); b.disabled = true; b.lastElementChild.textContent = t("scanning");
   try {
-    const list = await (await fetch("api/scan", {cache: "no-store"})).json();
+    const list = await (await fetch(settingsBase + "scan", {cache: "no-store"})).json();
     $("networks").replaceChildren(...list.sort((x, y) => y.rssi - x.rssi).map(n => Object.assign(document.createElement("option"), {value: n.ssid})));
     if (list.length) { $("wifiSsid").focus(); try { $("wifiSsid").showPicker(); } catch (e) {} }
     else note(t("noNetworks"), "warn");
@@ -633,8 +646,10 @@ $("settings").onsubmit = async e => {
   if (ap && (ap.length < 8 || ap.length > 63)) return note(t("err").ap_password, "bad");
   if (m !== "hotspot" && !data.get("wifi_ssid")) return note(t("err").wifi_ssid, "bad");
   try {
-    const r = await (await fetch("api/settings", {method: "POST", body: new URLSearchParams(data)})).json();
+    const r = await (await fetch(settingsBase + "settings", {method: "POST", body: new URLSearchParams(data)})).json();
     if (!r.ok) return note(t("err")[r.error] || r.error, "bad");
+    $("apPass").value = $("wifiPass").value = "";
+    if (transport === "server") { settingsFor = null; return note(t("savedServer")(m, deviceSettings.ap_ssid)); }
     note(t("saved")(m === "hotspot" ? deviceSettings.ap_ssid : data.get("wifi_ssid"),
       m === "hotspot" ? "http://192.168.4.1" : "http://" + deviceSettings.hostname));
   } catch (e) { note(t("err").net, "bad"); }

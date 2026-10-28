@@ -20,6 +20,7 @@ import os
 import pathlib
 import time
 
+import aiohttp
 from aiohttp import WSMsgType, web
 
 from . import __version__
@@ -157,6 +158,26 @@ class Server:
         s = self.state()
         return web.json_response(s, dumps=lambda o: json.dumps(o, ensure_ascii=False))
 
+    async def device_proxy(self, request: web.Request) -> web.Response:
+        """Passes the board's settings API through, so the server page can change mode, WiFi and passwords.
+        Only /api/settings and /api/scan; the board never returns passwords, so neither does this."""
+        ip = self.loupe.target_ip
+        if not ip or self.loupe.fixed_ip:
+            return web.json_response({"ok": False, "error": "no_device"}, status=404)
+        path = "/api/" + request.match_info["what"]
+        body = await request.read() if request.method == "POST" else None
+        headers = {"Content-Type": request.headers.get("Content-Type", "application/x-www-form-urlencoded")}
+        try:
+            timeout = aiohttp.ClientTimeout(total=20)          # a WiFi scan takes a few seconds
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                async with session.request(request.method, f"http://{ip}{path}", data=body, headers=headers) as r:
+                    return web.Response(body=await r.read(), status=r.status, content_type="application/json")
+        except (aiohttp.ClientError, asyncio.TimeoutError):
+            # Saving restarts the board: the connection may end before the answer arrives.
+            if request.method == "POST":
+                return web.json_response({"ok": True, "restart": True})
+            return web.json_response({"ok": False, "error": "net"}, status=502)
+
     async def healthz(self, request: web.Request) -> web.Response:
         return web.json_response({"ok": True, "version": __version__, "home_side": self.loupe.target_ip,
                                   "live": self.loupe.state()["stage"] == "live"})
@@ -175,6 +196,8 @@ def make_app() -> web.Application:
     app.router.add_get("/ws", server.ws)
     app.router.add_get("/api/state", server.api_state)
     app.router.add_get("/healthz", server.healthz)
+    app.router.add_route("GET", "/api/device/{what:settings|scan}", server.device_proxy)
+    app.router.add_route("POST", "/api/device/{what:settings}", server.device_proxy)
     app.on_startup.append(server.on_startup)
     return app
 
