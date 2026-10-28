@@ -107,7 +107,7 @@ Want part identification? → [server/](server/) — `docker compose up -d` and 
 ```mermaid
 flowchart LR
   L["🔍 Loupe<br/>own WiFi only"] -- "BLE wake-up<br/>WiFi + UDP" --> A["ESP32<br/>loupe side"]
-  A -- "3 wires · UART 2 Mbaud<br/>whole frames, CRC" --> B["NodeMCU / ESP32<br/>home side"]
+  A -- "3 wires · UART 1 Mbaud<br/>whole frames, CRC" --> B["NodeMCU / ESP32<br/>home side"]
   B -- "Hotspot / home WiFi" --> P["📱 any browser"]
   B -. "server mode<br/>UDP relay + broadcast" .-> S["🖥️ server"]
   S -- "WebSocket" --> P

@@ -105,7 +105,7 @@ Bauteil-Bestimmung gewünscht? → [server/](server/) – `docker compose up -d`
 ```mermaid
 flowchart LR
   L["🔍 Lupe<br/>nur eigenes WLAN"] -- "BLE-Weckruf<br/>WLAN + UDP" --> A["ESP32<br/>Lupenseite"]
-  A -- "3 Drähte · UART 2 Mbaud<br/>ganze Bilder, CRC" --> B["NodeMCU / ESP32<br/>Hausseite"]
+  A -- "3 Drähte · UART 1 Mbaud<br/>ganze Bilder, CRC" --> B["NodeMCU / ESP32<br/>Hausseite"]
   B -- "Hotspot / Heim-WLAN" --> P["📱 jeder Browser"]
   B -. "Servermodus<br/>UDP-Weiterleitung + Rundruf" .-> S["🖥️ Server"]
   S -- "WebSocket" --> P
