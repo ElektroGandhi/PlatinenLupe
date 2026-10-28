@@ -49,7 +49,7 @@ on a laptop or a bench monitor, no way to show the person next to you.
 | Mode | You need | Open |
 |---|---|---|
 | **Hotspot** *(default)* | USB power. That's it. | join `Platinenlupe-XXXX` → the page opens by itself |
-| **Home network** | your WiFi | `http://platinenlupe.local` |
+| **Home network** | your WiFi | the board's address, shown on its settings page (computers: `http://platinenlupe.local`) |
 | **Server** | any Docker host or Raspberry Pi + a local vision model | `http://<server>:8080` |
 
 Switch on the device's own settings page. Every mode includes the full viewer; the server only adds

@@ -250,6 +250,7 @@
         <label class="mode"><input type="radio" name="mode" value="home"><svg aria-hidden="true"><use href="#i-home"/></svg><b data-i18n="mHome"></b><small data-i18n="mHomeText"></small></label>
         <label class="mode"><input type="radio" name="mode" value="server"><svg aria-hidden="true"><use href="#i-server"/></svg><b data-i18n="mServer"></b><small data-i18n="mServerText"></small></label>
       </fieldset>
+      <div class="notice" id="addrNote" hidden></div>
       <div id="wifiFields">
         <div class="field">
           <label for="wifiSsid" data-i18n="wifiName"></label>
@@ -298,7 +299,7 @@ const T = {
     tapHint: "Tap the image to put the focus ring on a part.", identifyNow: "Identify now", continuous: "Continuous",
     focusSize: "Focus size", light: "Light ring", off: "Off", full: "Full", settings: "Device settings", mode: "Mode",
     mHotspot: "Hotspot", mHotspotText: "Its own WiFi. No router, no internet. Join it and the loupe opens. Default.",
-    mHome: "Home network", mHomeText: "Joins your WiFi. Open platinenlupe.local in any browser.",
+    mHome: "Home network", mHomeText: "Joins your WiFi. Every browser in the network can open it — at the address shown below.",
     mServer: "Server", mServerText: "Home network plus your own server, which adds part identification.",
     wifiName: "WiFi name", wifiPassword: "WiFi password", scan: "Scan", hotspotPassword: "Hotspot password",
     keepEmpty: "Leave empty to keep the current one.", min8: "8 to 63 characters. Leave empty to keep the current one.",
@@ -320,6 +321,7 @@ const T = {
     charging: "charging", ago: s => `${s} s ago`, compute: s => `${s} s compute`, busy: "identifying",
     readCheck: " Printed markings and values are often misread — please check them yourself.",
     confidence: { high: "high confidence", medium: "medium confidence", low: "low confidence" },
+    address: ip => `Address of the board in your network: http://${ip} (computers also: http://platinenlupe.local)`,
     savedServer: (mode, ap) => mode === "hotspot" ? `Saved. The board leaves your network and opens its hotspot “${ap}”.` : "Saved. The board restarts — this page finds it again in a few seconds.",
     failed: "Identification failed", saved: (ssid, url) => `Saved. The device restarts now. ${ssid ? `Join “${ssid}”, then open ${url}.` : `Open ${url} in a moment.`}`,
     err: { mode: "Pick a mode.", wifi_ssid: "Enter the name of your WiFi.", ap_password: "The hotspot password needs 8 to 63 characters.", wifi_length: "WiFi name or password too long.", net: "The device did not answer." },
@@ -339,7 +341,7 @@ const T = {
     tapHint: "Tippe ins Bild, um den Fokusring auf ein Bauteil zu setzen.", identifyNow: "Jetzt bestimmen", continuous: "Laufend",
     focusSize: "Fokusgröße", light: "Lichtring", off: "Aus", full: "Voll", settings: "Geräte-Einstellungen", mode: "Modus",
     mHotspot: "Hotspot", mHotspotText: "Eigenes WLAN. Kein Router, kein Internet. Verbinden – und die Lupe öffnet sich. Standard.",
-    mHome: "Heimnetz", mHomeText: "Geht in dein WLAN. Im Browser platinenlupe.local öffnen.",
+    mHome: "Heimnetz", mHomeText: "Geht in dein WLAN. Jeder Browser im Netz kann es öffnen – unter der Adresse unten.",
     mServer: "Server", mServerText: "Heimnetz plus eigener Server, der die Bauteile bestimmt.",
     wifiName: "WLAN-Name", wifiPassword: "WLAN-Passwort", scan: "Suchen", hotspotPassword: "Hotspot-Passwort",
     keepEmpty: "Leer lassen, um das bisherige zu behalten.", min8: "8 bis 63 Zeichen. Leer lassen, um das bisherige zu behalten.",
@@ -361,6 +363,7 @@ const T = {
     charging: "lädt", ago: s => `vor ${s} s`, compute: s => `${s} s Rechenzeit`, busy: "bestimme gerade",
     readCheck: " Aufdrucke und Werte liest das Modell oft falsch – bitte selbst prüfen.",
     confidence: { high: "hohe Sicherheit", medium: "mittlere Sicherheit", low: "geringe Sicherheit" },
+    address: ip => `Adresse des Boards in deinem Netz: http://${ip} (am Computer auch: http://platinenlupe.local)`,
     savedServer: (mode, ap) => mode === "hotspot" ? `Gespeichert. Das Board verlässt dein Netz und öffnet seinen Hotspot „${ap}“.` : "Gespeichert. Das Board startet neu – diese Seite findet es in ein paar Sekunden wieder.",
     failed: "Bestimmung fehlgeschlagen", saved: (ssid, url) => `Gespeichert. Das Gerät startet neu. ${ssid ? `Verbinde dich mit „${ssid}“ und öffne ${url}.` : `Öffne gleich ${url}.`}`,
     err: { mode: "Wähle einen Modus.", wifi_ssid: "Gib den Namen deines WLANs ein.", ap_password: "Das Hotspot-Passwort braucht 8 bis 63 Zeichen.", wifi_length: "WLAN-Name oder Passwort zu lang.", net: "Das Gerät hat nicht geantwortet." },
@@ -449,6 +452,9 @@ function showState(s) {
     mc.lastElementChild.textContent = t("mode" + s.mode[0].toUpperCase() + s.mode.slice(1)) + (s.fallback ? " · " + t("fallback") : "");
   }
   if (s.light != null && Date.now() - lightTouched > 3000) showLight(s.light);
+  const boardMode = transport === "server" ? s.device_mode : s.mode;
+  $("addrNote").hidden = !(s.ip && boardMode && boardMode !== "hotspot");
+  if (!$("addrNote").hidden) $("addrNote").textContent = t("address")(s.ip);
   if (transport === "server") {
     $("ident").hidden = !s.identify;
     // the server found a board: offer its settings here (passed through by the server)
@@ -651,7 +657,7 @@ $("settings").onsubmit = async e => {
     $("apPass").value = $("wifiPass").value = "";
     if (transport === "server") { settingsFor = null; return note(t("savedServer")(m, deviceSettings.ap_ssid)); }
     note(t("saved")(m === "hotspot" ? deviceSettings.ap_ssid : data.get("wifi_ssid"),
-      m === "hotspot" ? "http://192.168.4.1" : "http://" + deviceSettings.hostname));
+      m === "hotspot" ? "http://192.168.4.1" : (lastState && lastState.ip && lastState.mode !== "hotspot" ? "http://" + lastState.ip : "http://" + deviceSettings.hostname)));
   } catch (e) { note(t("err").net, "bad"); }
 };
 

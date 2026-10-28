@@ -48,7 +48,7 @@ oder dem Werkstattmonitor, nichts zum Zeigen für die Person nebenan.
 | Modus | Du brauchst | Öffnen |
 |---|---|---|
 | **Hotspot** *(Standard)* | USB-Strom. Sonst nichts. | mit `Platinenlupe-XXXX` verbinden → die Seite öffnet sich von selbst |
-| **Heimnetz** | dein WLAN | `http://platinenlupe.local` |
+| **Heimnetz** | dein WLAN | die Adresse des Boards, steht in seinen Einstellungen (am Computer: `http://platinenlupe.local`) |
 | **Server** | einen Docker-Rechner oder Raspberry Pi + ein lokales Bildmodell | `http://<server>:8080` |
 
 Umgeschaltet wird auf der Einstellungsseite des Geräts. Jeder Modus enthält die volle Ansicht; der Server ergänzt nur

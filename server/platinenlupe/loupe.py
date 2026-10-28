@@ -1,7 +1,8 @@
-"""Connection to the loupe — through the home-side board (server mode) or directly (PL_DEVICE_IP).
+"""Connection to the loupe — through the home-side board or directly (PL_DEVICE_IP).
 
-The home side speaks exactly the loupe's protocol (protocol.py) and broadcasts its state every 2 s on
-UDP 61499. From that the page learns which link of the chain is missing.
+The home side broadcasts its state every 2 s on UDP 61499. In server mode it speaks exactly the loupe's
+protocol (protocol.py) over UDP; in home mode it only serves its own page, so frames are fetched from its
+HTTP API instead (/api/frame.jpg, ~4 frames/s). Either way the page here shows the picture.
 """
 
 from __future__ import annotations
@@ -12,6 +13,8 @@ import logging
 import os
 import socket
 import time
+
+import aiohttp
 
 from . import protocol as p
 
@@ -80,7 +83,7 @@ class Loupe:
         self._video, _ = await loop.create_datagram_endpoint(lambda: _Receiver(self._on_video), sock=v)
         self._control, _ = await loop.create_datagram_endpoint(
             lambda: _Receiver(self._on_control), local_addr=("0.0.0.0", 0))
-        self._tasks = [asyncio.create_task(self._tick())]
+        self._tasks = [asyncio.create_task(self._tick()), asyncio.create_task(self._pull())]
         log.info("Video stream requested")
 
     async def stop(self) -> None:
@@ -99,11 +102,53 @@ class Loupe:
         self._video = self._control = None
         log.info("Video stream stopped")
 
+    @property
+    def board_mode(self) -> str | None:
+        return None if self.fixed_ip else (self.beacon or {}).get("mode", "server")
+
     def set_light(self, percent: int) -> None:
         self.light = max(0, min(100, int(percent)))
         ip = self.target_ip
-        if ip and self._control:
+        if ip and self.board_mode == "home":
+            asyncio.ensure_future(self._post_light(ip))
+        elif ip and self._control:
             self._control.sendto(p.light(self.light), (ip, p.PORT_CONTROL))
+
+    async def _post_light(self, ip: str) -> None:
+        try:
+            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as s:
+                await s.post(f"http://{ip}/api/light", data={"v": str(self.light)})
+        except (aiohttp.ClientError, asyncio.TimeoutError):
+            pass
+
+    async def _pull(self) -> None:
+        """Home mode: fetch whole frames from the board's own page API. Each request also keeps its viewer
+        timer alive, so the board keeps the loupe awake and sends the light level itself."""
+        session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5))
+        last_state = 0.0
+        try:
+            while True:
+                ip = self.target_ip
+                if not ip or self.board_mode != "home":
+                    await asyncio.sleep(1)
+                    continue
+                try:
+                    async with session.get(f"http://{ip}/api/frame.jpg") as r:
+                        if r.status == 200:
+                            jpeg = await r.read()
+                            self._frame_arrived(jpeg, float(r.headers.get("X-Angle", "0") or 0))
+                        else:
+                            await asyncio.sleep(0.3)
+                    if time.monotonic() - last_state > 2:
+                        last_state = time.monotonic()
+                        async with session.get(f"http://{ip}/api/state") as r:
+                            st = await r.json(content_type=None)
+                        self.telemetry.update({k: st[k] for k in ("battery", "charging", "chip", "loupe_firmware",
+                                                                  "resolution", "camera_fps", "loupe_rssi") if k in st})
+                except (aiohttp.ClientError, asyncio.TimeoutError, ValueError):
+                    await asyncio.sleep(1)
+        finally:
+            await session.close()
 
     async def _tick(self) -> None:
         """Start and heartbeat every second; light every 5 s (it is 0 again after a restart of the loupe)."""
@@ -126,13 +171,15 @@ class Loupe:
 
     def _on_video(self, data: bytes, sender) -> None:
         done = self._assembler.feed(data)
-        if done is None:
-            return
+        if done is not None:
+            self._frame_arrived(*done)
+
+    def _frame_arrived(self, jpeg: bytes, angle: float) -> None:
         now = time.monotonic()
         self.last_frame = now
         self.frames += 1
         self._window = [t for t in self._window if now - t < 2] + [now]
-        self.on_frame(*done)
+        self.on_frame(jpeg, angle)
 
     def _on_control(self, data: bytes, sender) -> None:
         self.telemetry.update(p.parse_telemetry(data))
@@ -143,13 +190,11 @@ class Loupe:
         now = time.monotonic()
         live = now - self.last_frame < 3
         a = (self.beacon or {}).get("a") if self.target_ip and not self.fixed_ip else None
-        mode = (self.beacon or {}).get("mode", "server") if not self.fixed_ip else None
+        mode = self.board_mode
         if live:
             stage, code = "live", "live"
         elif not self.target_ip:
             stage, code = "error", "no_device"
-        elif mode and mode != "server":
-            stage, code = "wait", "device_home_mode"      # found, but it does not relay the image
         elif self.fixed_ip:
             stage, code = "wait", "direct"
         elif a is None:
