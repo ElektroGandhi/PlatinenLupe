@@ -7,7 +7,7 @@
 <p align="center">
   <b>Turn a cheap WiFi ear camera into an app-free circuit-board microscope.</b><br>
   Live in any browser. On its own hotspot, in your home network, or with local AI that names the part under the lens.<br>
-  No app. No cloud. No account. Two ESP boards and three wires.
+  No app. No cloud. No account. Two ESP boards and four wires.
 </p>
 
 <p align="center">
@@ -156,7 +156,8 @@ OpenSCAD source, STL and a ready 3MF: [enclosure/](enclosure/).
 | Whole chain on real hardware in hotspot mode: loupe → ESP32 → NodeMCU → browser, 4.8 fps, 0 misses in 30 s; loupe restarts are recovered | ✅ measured |
 | Weak signal (loupe at −75 dBm): 3.4 fps steady for 3 min, 0 link errors (at 2 Mbaud it froze in a loop — now 1 Mbaud) | ✅ measured |
 | Home-network mode on hardware; settings kept across the firmware update | ✅ measured |
-| Part identification from the browser against LM Studio | ⏳ in progress |
+| Part identification from the browser against LM Studio (page served by the board, test image): SOIC-8 "LM358", high confidence, 5.3 s | ✅ measured |
+| Part identification with the real loupe on a phone | ⏳ in progress |
 | Printed case | ⏳ not printed yet |
 
 ## Repository
@@ -199,5 +200,6 @@ project exists for interoperability: it does not modify the camera and contains 
 ## License
 
 Code and docs: [MIT](LICENSE). Case design (`enclosure/`): [CC BY-SA 4.0](enclosure/LICENSE).
+Third-party components and their licences: [THIRD_PARTY.md](THIRD_PARTY.md).
 
 <p align="center"><sub>Made at a workbench, for workbenches. If it helped you read a marking you couldn't read before — give it a ⭐.</sub></p>

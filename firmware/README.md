@@ -1,6 +1,6 @@
 # Firmware
 
-Two small programs for two cheap boards, joined by three wires.
+Two small programs for two cheap boards, joined by four wires (three for data, one for 5 V).
 
 | Board | Firmware | Job |
 |---|---|---|

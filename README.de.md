@@ -7,7 +7,7 @@
 <p align="center">
   <b>Aus einer günstigen WLAN-Ohrkamera wird ein Platinenmikroskop – ohne App.</b><br>
   Live in jedem Browser. Im eigenen Hotspot, im Heimnetz oder mit lokaler KI, die das Bauteil unter der Linse benennt.<br>
-  Keine App. Keine Cloud. Kein Konto. Zwei ESP-Boards und drei Drähte.
+  Keine App. Keine Cloud. Kein Konto. Zwei ESP-Boards und vier Drähte.
 </p>
 
 <p align="center">
@@ -155,7 +155,8 @@ OpenSCAD-Quelle, STL und fertige 3MF: [enclosure/](enclosure/).
 | Ganze Kette an echter Hardware im Hotspot-Modus: Lupe → ESP32 → NodeMCU → Browser, 4,8 B/s, 0 Aussetzer in 30 s; Neustarts der Lupe werden überbrückt | ✅ gemessen |
 | Schwacher Funk (Lupe bei −75 dBm): 3,4 B/s gleichmäßig über 3 min, 0 Kabelfehler (bei 2 Mbaud fror das Bild im Kreis ein – jetzt 1 Mbaud) | ✅ gemessen |
 | Heimnetz-Modus an der Hardware; Einstellungen überstehen das Firmware-Update | ✅ gemessen |
-| Bauteil-Bestimmung aus dem Browser gegen LM Studio | ⏳ in Arbeit |
+| Bauteil-Bestimmung aus dem Browser gegen LM Studio (Seite vom Board, Testbild): SOIC-8 „LM358“, hohe Sicherheit, 5,3 s | ✅ gemessen |
+| Bauteil-Bestimmung mit echter Lupe am Handy | ⏳ in Arbeit |
 | Gedrucktes Gehäuse | ⏳ noch nicht gedruckt |
 
 ## Häufige Fragen
@@ -188,5 +189,6 @@ der Interoperabilität: Es verändert die Kamera nicht und enthält keinen Herst
 ## Lizenz
 
 Code und Doku: [MIT](LICENSE). Gehäuse (`enclosure/`): [CC BY-SA 4.0](enclosure/LICENSE).
+Fremde Bestandteile und ihre Lizenzen: [THIRD_PARTY.md](THIRD_PARTY.md).
 
 <p align="center"><sub>Gebaut an einer Werkbank, für Werkbänke. Wenn sie dir einen Aufdruck lesbar gemacht hat, den du vorher nicht lesen konntest – gib ihr einen ⭐.</sub></p>

@@ -46,8 +46,8 @@ Theory is cheap; every claim in [protocol.md](protocol.md) was measured on the r
 ## Step 4 — two boards
 
 The camera **always** runs its own WiFi and cannot join yours. A phone can be in only one WiFi at a time. So: one
-ESP32 lives in the camera's WiFi (and wakes it over Bluetooth), a second board lives where you are — as a hotspot,
-in your home network, or next to a server. Three wires between them carry complete frames at 1 Mbaud.
+ESP32 lives in the camera's WiFi (and wakes it over Bluetooth), a second board lives where you are — as a hotspot
+or in your home network. Three data wires between them (plus 5 V) carry complete frames at 1 Mbaud.
 
 ## Ground rules
 
