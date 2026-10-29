@@ -113,7 +113,7 @@ def case_front(work: Path) -> Image.Image:
 def case_parts(work: Path) -> Image.Image:
     plates = [[("body", BEIGE), ("lid", BEIGE), ("hooks", BEIGE)],
               [("ring", BROWN), ("stripe", BROWN), ("light_frames", BROWN), ("fin", BROWN),
-               ("quiver", BROWN), ("saturn", BROWN)],
+               ("quiver", BROWN), ("saturn", BROWN), ("slider", BROWN)],
               [(("badge", "badge_text"), None)]]
     # Parts as build.py places them on each plate (same packing as the 3MF), plates stacked front to back.
     # Each plate is drawn only as large as its parts plus a margin, otherwise the picture is mostly empty bed.

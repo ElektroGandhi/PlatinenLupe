@@ -18,6 +18,8 @@ LETTERING = {
     "lettering_name": ("PLATINENLUPE", 5.0),
     "lettering_a": ("A", 3.5),
     "lettering_b": ("B", 3.5),
+    "lettering_run": ("RUN", 3.0),       # USB selector, engraved on the plinth
+    "lettering_flash": ("FLASH", 3.0),
 }
 
 

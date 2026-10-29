@@ -9,9 +9,9 @@
 //   Beige:  body (back wall on the bed) . lid (face side on the bed) . hooks (2x, flat)
 //   Brown:  ring (porthole) . stripe (speed stripes) . badge (+ badge_text in beige) . light_frames (2 frames)
 //           . fin (right side) . saturn . quiver (holder for the loupe pen, left side, printed upright)
+//           . slider (USB selector at the bottom, flat)
 //   all     assembled preview
-// No part needs supports. Brown parts sit in 1.2 mm deep recesses (0.15 mm clearance): press them in,
-// add a drop of superglue if needed.
+// No part needs supports, and nothing is glued: every part clicks in (see "Snap fits").
 //
 // Dimensions -- where they come from (standard sizes only with two independent sources):
 //   NodeMCU v3 LoLin 58 x 31 mm, pin rows 28 mm apart: AZ-Delivery and Makerlab (two sources)
@@ -33,7 +33,7 @@ pcb_gap = 0.6;               // clearance around the PCB, per side
 
 // ---- Capsule --------------------------------------------------------------------------------
 wall     = 2.4;
-back_t   = 4.0;              // back wall: thick enough for the hook pockets
+back_t   = 4.0;              // back wall: room for the hook snaps
 cable_h  = 25.0;             // PCB underside above the back wall: pins 8.5 + Dupont 14 + bend
 inner_d  = 33.0;             // inside of back wall to inside of lid
 inner_w  = 84.0;
@@ -42,12 +42,14 @@ r_top    = 16.0;             // outer corners: strongly rounded at the top (caps
 r_bottom = 8.0;
 margin_x = 5.8;              // boards from the inner side wall
 usb_margin = 1.5;            // USB end of the PCB to the inside of the bottom wall
-support_l = 3.5;             // support under each PCB end (the pin headers sit further in)
+support_l = 5.0;             // support under each PCB end (the pin headers sit further in)
 fence    = 1.2;              // rim that locates the PCB (< PCB thickness)
 x_node   = margin_x + 1.6 + (nodemcu[0] + 2*pcb_gap)/2;                                   // PCB centres (inside)
 x_esp    = margin_x + 1.6 + nodemcu[0] + 2*pcb_gap + 1.6 + 4 + 1.6 + (esp32[0] + 2*pcb_gap)/2;
 usb_w    = 13.5;             // USB-C plug including strain relief (~12.5 x 6.5 mm)
 usb_h    = 9.0;
+pcb_top  = back_t + cable_h + pcb_t;                 // top face of both PCBs
+usb_z0   = pcb_top + 1.6 - usb_h/2;                  // bottom of the USB notches
 
 lid_t    = 3.0;
 chamfer  = 2.0;              // chamfer around the lid (1950s TV set)
@@ -56,7 +58,48 @@ lip_w    = 1.6;
 fit      = 0.2;
 recess   = 1.2;              // depth of the recesses for the brown parts
 inlay_t  = 2.0;              // thickness of the brown inlays -> 0.8 mm proud
-inlay_gap = 0.15;            // clearance of the inlays, per side
+
+// ---- Snap fits ------------------------------------------------------------------------------
+// Nothing is glued. Every spring tongue is checked against PLA's bending strain:
+//   eps = 1.5 * t * d / L^2   (cantilever; t = thickness in the bending direction, d = deflection, L = free length)
+// Limit 2 % (PLA yields at ~3-4 %; 2 % keeps the parts releasable). Each tongue asserts its own value.
+function strain(t, d, L) = 1.5 * t * d / (L * L);
+snap_gap  = 0.2;             // clearance per side in every slot and recess (0.15 was too tight for FDM)
+inlay_gap = snap_gap;
+
+// Wall snaps (fin, quiver, Saturn, hooks): two prongs with 45 deg barbs that catch behind the inner face of
+// the wall, a rigid key between them fills the slot. Relief slits make the prongs start inside the part.
+snap_barb = 0.6;             // barb height; engagement behind the wall = snap_barb - snap_gap = 0.4
+snap_d    = snap_barb - snap_gap;
+snap_y    = [13.5, 29.0];    // tenon of fin and quiver along the side wall
+snap_len  = snap_y[1] - snap_y[0];
+side_snap = [1.2, 0.8, 4.0]; // fin and quiver: prong t, slit, root depth inside the part
+hook_snap = [1.0, 0.7, 3.0]; // hooks (tenon 6 mm long)
+sat_snap  = [1.0, 0.7, 3.5]; // Saturn (tenon 8 mm wide)
+saturn_foot = 4.0;           // foot height: the prong roots sit inside it
+assert(strain(side_snap[0], snap_d, side_snap[2] + wall) <= 0.02);    // 1.5*1.2*0.4/6.4^2 = 1.76 %
+assert(strain(hook_snap[0], snap_d, hook_snap[2] + back_t) <= 0.02);  // 1.5*1.0*0.4/7.0^2 = 1.22 %
+assert(strain(sat_snap[0], snap_d, sat_snap[2] + wall) <= 0.02);      // 1.5*1.0*0.4/5.9^2 = 1.72 %
+
+// Inlay clips (ring, stripes, badge, light frames): a tongue cut into the edge of the inlay, in the plane of
+// the part (that is the print plane, so the filament runs along the tongue). A nub at its free end clicks
+// into a groove under the edge of the recess.
+clip_t = 1.2;  clip_s = 0.7;  clip_L = 8.0;   // tongue thickness, slit, length
+clip_n = 3.0;  clip_d = 0.6;  clip_h = 0.6;   // nub length, protrusion (45 deg), height
+assert(strain(clip_t, clip_d - snap_gap, clip_L - 0.3 - clip_n/2) <= 0.02);    // 1.5*1.2*0.4/6.2^2 = 1.87 %
+stripe_slit = 0.8;           // the speed stripes are split at their left end: two prongs of 0.9 mm
+stripe_d    = 0.55;
+assert(strain((2.6 - stripe_slit)/2, stripe_d - snap_gap, clip_L - 0.3 - clip_n/2) <= 0.02);   // 1.23 %
+
+// Board latches: four arms per board rise from the supports and click over the upper edge of the PCB, so
+// the Dupont plugs underneath cannot push it up -- with or without the lid. Bend an arm outwards to release.
+latch_t = 1.2;  latch_L = 12.0;  latch_w = 3.0;
+latch_gap = 0.2;             // arm to PCB edge
+latch_nub = 0.9;             // reaches 0.7 mm over the PCB
+latch_play = 0.1;            // nub underside above the PCB
+assert(strain(latch_t, latch_nub - latch_gap, latch_L) <= 0.02);        // 1.5*1.2*0.7/12^2 = 0.88 %
+// Lid hold-downs: second safety. Leaning 45 deg they spring a little; they press 0.2 mm into the PCB.
+hold_press = 0.2;
 
 // ---- Skadis hooks ---------------------------------------------------------------------------
 hook_spacing = 40.0;
@@ -65,31 +108,51 @@ pegboard_t = 5.2 + 0.4;      // Skadis board + clearance
 web_h     = 6.0;
 leg_l     = 7.0;             // web + leg = 13 mm < 15 mm slot height
 leg_t     = 3.0;
-tenon_t   = 3.0;
 
 outer_w   = inner_w + 2*wall;
 outer_h   = inner_h + 2*wall;
 body_t    = back_t + inner_d;
 hook_y    = outer_h - 16;
 
+// ---- USB selector (slider in the plinth under the bottom wall) -------------------------------
+// One plate with two windows. "RUN": the NodeMCU socket is free, the ESP32 one covered. "FLASH": the other
+// way round. In no position are both sockets open far enough for a plug -- two power supplies cannot meet.
+plinth_h = 3.6;              // plinth below the capsule: holds the slider
+sl_t     = 1.6;              // plate thickness
+sl_z0    = 15.8;             // bottom of the slider slot
+sl_lift  = 0.2;
+skin_top = 21.0;             // the outer skin of the plinth ends here; the knob runs above it
+sl_ww    = usb_w;            // window = notch width
+sl_c     = 1.0;              // overlap past a covered notch
+sl_s     = sl_ww + sl_c;     // travel
+xn = wall + x_node;  xe = wall + x_esp;
+sl_left  = sl_s + sl_ww/2 + sl_c;                    // first window from the left end of the plate
+sl_len   = sl_left + (xe - xn) + sl_ww/2 + sl_c;
+sl_x0    = xn - sl_left;                             // left end of the plate in RUN
+sl_h     = body_t - 0.2 - sl_z0 - sl_lift;
+sl_tongue = 14.0;            // detent tongue at each end of the plate, bump 1.2 mm high
+assert(strain(sl_t, 1.0, sl_tongue - 1.5) <= 0.02);  // when it is pushed in: 1.5*1.6*1.0/12.5^2 = 1.54 %
+assert(sl_x0 - snap_gap >= 1.6 && sl_x0 + sl_len + sl_s + snap_gap <= outer_w - 1.6);
+
 // ---- Lid decoration (coordinates on the face side, origin bottom left) -----------------------
-porthole   = [outer_w/2 + 9, 39];   // porthole centre
+porthole   = [outer_w/2 + 9, 40.5]; // porthole centre
 porthole_r = [15, 19];              // ring inner / outer
 // Light band instead of round lamps: the LED position on the boards is not measured.
 // The band covers 3-13 mm from the USB end and almost the full PCB width.
 band_y    = [wall + usb_margin + 3, wall + usb_margin + 13];
 band_w    = [22, 20];                // window width NodeMCU, ESP32
-band_frame = 1.8;                    // brown frame around the window
-badge_c   = [outer_w/2, outer_h - 9.5];
+band_frame = 3.0;                    // brown frame around the window (wide enough for a clip tongue)
+skin_overlap = 1.2;                  // the 0.6 mm light skin reaches this far under the full-thickness lid
+badge_c   = [outer_w/2, outer_h - 9.0];
 badge_size = [62, 9.5];
 stripe_dy = [6, 0, -6];             // relative to the porthole centre
 stripe_x  = [7, 13, 19];            // left end of each stripe (top, middle, bottom)
-arc_r     = [porthole_r[1] + 0.6, porthole_r[1] + 3.2];   // arc of the speed stripes around the porthole
+arc_r     = [porthole_r[1] + 1.2, porthole_r[1] + 3.8];   // arc of the speed stripes around the porthole
 
 // ---- Tail fin and Saturn -------------------------------------------------------------------
 fin_z     = back_t + 10;            // position in depth (centre of the fin)
 fin_t     = 3.0;
-fin_root  = [12, 34];               // y range of the root at the side wall
+fin_root  = [12, 34];               // y range of the fin root at the side wall
 saturn_t  = 3.0;
 
 // ---- Quiver for the loupe pen (left side) ---------------------------------------------------
@@ -102,10 +165,12 @@ cap_l     = 50.0;            // pen cap, measured -- only the cap sits in the qu
 quiver_y  = [-15, 40];       // 55 mm: floor + cap + rim. The pen sticks out ~90 mm at the top
 floor_t   = 2.0;
 floor_hole = 9.0;            // hole in the floor: the lens does not rest on anything
-funnel_h  = 6.0;             // lead-in funnel at the top, 45 deg
+funnel_h  = 6.0;             // lead-in funnel at the top
 quiver_ri = (pen_d + quiver_gap)/2;
 quiver_ra = quiver_ri + quiver_wall;
-quiver_x  = -quiver_ra - 1.0;   // tube centre: 1 mm from the wall, the web sits in between
+quiver_off = 5.5;            // tube to wall: room for the snap prongs, and the funnel stays clear of the wall
+quiver_clear = 1.5;          // nothing but the web comes closer to the wall (0.3 mm jammed on the real print)
+quiver_x  = -quiver_ra - quiver_off;
 
 // =============================================================================================
 module capsule_2d(b, h, ro, ru) {
@@ -115,8 +180,66 @@ module capsule_2d(b, h, ro, ru) {
     }
 }
 module outer_2d() { capsule_2d(outer_w, outer_h, r_top, r_bottom); }
+// body and lid outline: capsule on a plinth with square corners (the plinth carries the USB slider)
+module outline_2d() { union() { outer_2d(); translate([0, -plinth_h]) square([outer_w, plinth_h + r_bottom]); } }
 module inner_2d(o = 0) { translate([wall + o, wall + o]) capsule_2d(inner_w - 2*o, inner_h - 2*o, r_top - wall - o, r_bottom - wall - o); }
+module sector_2d(a0, a1, r = 60) { polygon(concat([[0, 0]], [for (i = [0:16]) r*[cos(a0 + i*(a1 - a0)/16), sin(a0 + i*(a1 - a0)/16)]])); }
+module place(c) { translate(c[0]) rotate(c[1]) children(); }
 
+// ---- Wall snap: local u = into the wall (0 = outer face), v = along the slot -----------------
+module snap_tenon_2d(len, depth, s) {   // s = [prong t, slit, root]
+    t = s[0]; sl = s[1]; root = s[2]; tip = depth + snap_gap + snap_barb;
+    translate([-0.5, t + sl]) square([depth + 0.5, len - 2*(t + sl)]);              // rigid key
+    for (m = [0, 1]) translate([0, m*len]) scale([1, m ? -1 : 1]) {
+        translate([-root, 0]) square([root + tip, t]);                                  // prong
+        polygon([[depth + snap_gap, 0.01], [depth + snap_gap, -snap_barb], [tip, 0.01]]);   // barb, 45 deg
+    }
+}
+module snap_relief_2d(len, s) {         // cut from the part: frees each prong down to its root
+    t = s[0]; sl = s[1]; root = s[2];
+    for (m = [0, 1]) translate([0, m*len]) scale([1, m ? -1 : 1]) {
+        translate([-root, t]) square([root + 0.01, sl]);
+        translate([-root, -sl]) square([root + 0.01, sl]);
+    }
+}
+module snap_slot(len, depth, th) { translate([-0.5, -snap_gap, -th/2 - snap_gap]) cube([depth + 1, len + 2*snap_gap, th + 2*snap_gap]); }
+
+// placements of the wall snaps (local u/v/thickness -> case coordinates)
+module at_left_wall()  { translate([0, snap_y[0], fin_z]) children(); }
+module at_right_wall() { translate([outer_w, snap_y[0], fin_z]) mirror([1, 0, 0]) children(); }
+module at_top_wall()   { translate([outer_w/2 - 4, outer_h, fin_z]) rotate([0, 0, -90]) children(); }
+module at_back_wall(s) { translate([outer_w/2 + s*hook_spacing/2, hook_y, 0]) multmatrix([[0, 0, 1, 0], [0, 1, 0, 0], [1, 0, 0, 0]]) children(); }
+
+// ---- Inlay clips (local: free end of the tongue at the origin, tongue along +x, inside = +y) ----
+module tongue_cut_2d() {
+    translate([0, clip_t]) square([clip_L, clip_s]);                    // slit behind the tongue
+    translate([-clip_s, -1]) square([clip_s, clip_t + clip_s + 1]);     // slit at the free end
+}
+module nub(d = clip_d) {   // along +x (clip_n), sticks out to -y, 45 deg from the bottom, flat top catches
+    rotate([90, 0, 90]) linear_extrude(clip_n) polygon([[0.4, 0], [0.4, clip_h], [-d, clip_h]]);   // 0.4 into the part: also on chamfered edges
+}
+module groove_2d(d = clip_d) { translate([-0.3, -d - 0.1]) square([clip_n + 0.6, d + 0.4]); }
+// tongues as [free end, angle] in the coordinates of each part
+function frame_clips(i) = let(xc = wall + [x_node, x_esp][i])
+    [[[xc + clip_L/2, band_y[1] + band_frame], 180], [[xc - clip_L/2, band_y[0] - band_frame], 0]];
+function badge_clips() = let(h = badge_size[1]/2)
+    [[[-16, h], 180], [[24, h], 180], [[-24, -h], 0], [[16, -h], 0]];
+ring_clip_at  = [0, 120, 240];
+ring_clip_deg = clip_L / (porthole_r[1] - clip_t/2) * 180 / PI;
+function ring_nubs() = [for (c = ring_clip_at) let(a = c - ring_clip_deg/2 + 0.3/porthole_r[1]*180/PI)
+    [porthole_r[1]*[cos(a), sin(a)], a + 90]];
+function stripe_nubs() = [for (i = [0:2]) let(y = porthole[1] + stripe_dy[i]) each
+    [[[stripe_x[i] + 0.3 + clip_n, y + 1.3], 180], [[stripe_x[i] + 0.3, y - 1.3], 0]]];
+module ring_tongue_cut_2d() {
+    ro = porthole_r[1];
+    for (c = ring_clip_at) {
+        a0 = c - ring_clip_deg/2;
+        intersection() { difference() { circle(r = ro - clip_t); circle(r = ro - clip_t - clip_s); } sector_2d(a0, a0 + ring_clip_deg); }
+        intersection() { difference() { circle(r = ro + 1); circle(r = ro - clip_t - clip_s); } sector_2d(a0 - clip_s/ro*180/PI, a0 + 1); }   // overlaps the slit: no T-junction
+    }
+}
+
+// =============================================================================================
 // Support under one PCB end: block with a shallow pocket the PCB rests in.
 module support(mx, y0, pcb, usb_end) {
     b = pcb[0] + 2*pcb_gap;
@@ -127,11 +250,30 @@ module support(mx, y0, pcb, usb_end) {
         translate([1.6 + 4, -1, -1]) cube([b - 8, support_l + 4, cable_h - 3]);   // centre left open for cables
     }
 }
+// Latch arm beside one PCB edge (s = -1 left, +1 right), y range ya..ya+latch_w
+module latch_arm(edge, s, ya) {
+    a = edge + s*latch_gap;                          // inner face of the arm
+    z1 = pcb_top + latch_play;                       // underside of the nub
+    translate([0, ya + latch_w, 0]) rotate([90, 0, 0]) linear_extrude(latch_w)
+        polygon([[a, z1 - latch_L - 0.1], [a + s*latch_t, z1 - latch_L - 0.1], [a + s*latch_t, z1 + 0.5 + latch_nub],
+                 [a, z1 + 0.5 + latch_nub], [a - s*latch_nub, z1 + 0.5], [a - s*latch_nub, z1], [a, z1]]);
+}
+module latch_room(edge, s, ya) {                     // cut from the support: the arm stands free
+    x0 = edge - s*0.4; x1 = edge + s*(pcb_gap + 1.6 + 0.5);
+    translate([min(x0, x1), ya - 0.6, pcb_top + latch_play - latch_L]) cube([abs(x1 - x0), latch_w + 1.2, latch_L + 5]);
+}
+function latch_places() = [for (p = [[x_node, nodemcu], [x_esp, esp32]], s = [-1, 1], e = [0, 1])
+    [wall + p[0] + s*p[1][0]/2, s,
+     e == 0 ? wall + usb_margin + 0.3 : wall + usb_margin + p[1][1] + 2*pcb_gap - support_l + 0.3]];
 module supports() {
-    for (p = [[x_node, nodemcu], [x_esp, esp32]]) {
-        support(p[0], usb_margin - 1.6, p[1], true);
-        support(p[0], usb_margin + p[1][1] + 2*pcb_gap - support_l, p[1], false);
+    difference() {
+        for (p = [[x_node, nodemcu], [x_esp, esp32]]) {
+            support(p[0], usb_margin - 1.6, p[1], true);
+            support(p[0], usb_margin + p[1][1] + 2*pcb_gap - support_l, p[1], false);
+        }
+        for (l = latch_places()) latch_room(l[0], l[1], l[2]);
     }
+    for (l = latch_places()) latch_arm(l[0], l[1], l[2]);
 }
 
 module vents() {      // ventilation: three horizontal slots per side, through the wall
@@ -141,32 +283,44 @@ module vents() {      // ventilation: three horizontal slots per side, through t
 }
 module usb_notches() {
     for (mx = [x_node, x_esp])
-        translate([wall + mx - usb_w/2, -1, back_t + cable_h + pcb_t + 1.6 - usb_h/2])
+        translate([wall + mx - usb_w/2, -1, usb_z0])
             cube([usb_w, wall + 2, inner_d]);         // open to the front: drop the PCB in with its socket
 }
-module hook_pockets() {
-    for (s = [-1, 1])
-        translate([outer_w/2 + s*hook_spacing/2 - (hook_w + 2*fit)/2, hook_y - fit, -0.01])
-            cube([hook_w + 2*fit, web_h + 2*fit, tenon_t + 0.2]);
+module wall_slots() {
+    at_left_wall()  snap_slot(snap_len, wall, fin_t);
+    at_right_wall() snap_slot(snap_len, wall, fin_t);
+    at_top_wall()   snap_slot(8, wall, saturn_t);
+    for (s = [-1, 1]) at_back_wall(s) snap_slot(web_h, back_t, hook_w);
 }
-module fin_slots() {
-    for (side = [0, 1])
-        translate([side ? outer_w - wall - 0.5 : -0.5, fin_root[0] - inlay_gap, fin_z - fin_t/2 - inlay_gap])
-            cube([wall + 1, fin_root[1] - fin_root[0] + 2*inlay_gap, fin_t + 2*inlay_gap]);
-}
-module saturn_slot() {
-    translate([outer_w/2 - 1.5 - inlay_gap, outer_h - wall - 0.5, fin_z - saturn_t/2 - inlay_gap]) cube([3 + 2*inlay_gap, wall + 1, saturn_t + 2*inlay_gap]);
+// slider guide in the plinth: slot, open above the skin for the knob, groove + detent holes for the bumps
+module slider_cuts() {
+    x0 = sl_x0 - snap_gap; len = sl_len + sl_s + 2*snap_gap; y_in = -(sl_t + 2*snap_gap);
+    zb = sl_z0 + sl_lift + 1.5;                        // height of the detent bumps
+    translate([x0, y_in, sl_z0]) cube([len, -y_in + 0.01, body_t]);                            // slot
+    translate([x0, -plinth_h - 1, skin_top]) cube([len, plinth_h + 1 + y_in + 0.01, body_t]);   // knob runs here
+    translate([x0, y_in - 0.6, zb - 1.4]) cube([len, 0.61, 1.6]);                             // groove: the flat top
+    for (pos = [0, 1], u = [1.5, sl_len - 1.5])                                                 // of the bumps catches
+        translate([sl_x0 + pos*sl_s + u, -plinth_h - 1, zb]) intersection() {                  // D-shaped detent holes:
+            rotate([-90, 0, 0]) cylinder(d = 2.8, h = plinth_h + 1 + y_in + 0.01, $fn = 24);   // the click, and a pin
+            translate([-2, 0, -2]) cube([4, plinth_h + 2, 2.2]);                                // pushed in here frees
+        }                                                                                       // the plate again
+    translate([x0, 0, 0]) rotate([90, 0, 90]) linear_extrude(len)                              // lead-in at the skin top
+        polygon([[y_in + 0.01, skin_top + 0.01], [y_in - 0.81, skin_top + 0.01], [y_in + 0.01, skin_top - 0.8]]);
+    for (r = [[x0, sl_x0 + sl_tongue + sl_s + 0.2], [sl_x0 + sl_len - sl_tongue - 0.2, x0 + len]])   // room behind the tongues
+        translate([r[0], -0.01, sl_z0 - 0.2]) cube([r[1] - r[0], 1.11, 7.2]);
+    // labels on the plinth front, readable from below (letters point to the front): under the knob at RUN / FLASH
+    translate([sl_x0 + sl_len/2 - 3, -plinth_h + 0.6, 10]) rotate([90, 0, 0]) linear_extrude(1.6) lettering_run();
+    translate([sl_x0 + sl_len/2 + sl_s + 3, -plinth_h + 0.6, 10]) rotate([90, 0, 0]) linear_extrude(1.6) lettering_flash();
 }
 
 module body() {
     difference() {
-        linear_extrude(body_t) outer_2d();
+        linear_extrude(body_t) outline_2d();
         translate([0, 0, back_t]) linear_extrude(inner_d + 1) inner_2d();
         vents();
         usb_notches();
-        hook_pockets();
-        fin_slots();
-        saturn_slot();
+        wall_slots();
+        slider_cuts();
         // snap recesses for the lid latches, inside the side walls
         for (x = [wall - 0.6, outer_w - wall - 0.01]) translate([x, outer_h/2 - 8, body_t - 2.2]) cube([0.61, 16, 1.0]);
     }
@@ -174,8 +328,7 @@ module body() {
         intersection() { supports(); translate([0, 0, -1]) linear_extrude(body_t + 2) outer_2d(); }
         // the USB-C plug hit the locating rim in front of the PCB edge (collision check: 9 mm^3 each)
         for (mx = [x_node, x_esp])
-            translate([wall + mx - usb_w/2, wall - 1, back_t + cable_h + pcb_t + 1.6 - usb_h/2])
-                cube([usb_w, usb_margin + 1, usb_h]);
+            translate([wall + mx - usb_w/2, wall - 1, usb_z0]) cube([usb_w, usb_margin + 1, usb_h]);
     }
 }
 
@@ -201,13 +354,34 @@ module band_2d(i, o = 0) {   // window (o > 0 enlarges it), centred over board i
 module light_frames_2d(o = 0) { for (i = [0, 1]) difference() { band_2d(i, band_frame + o); band_2d(i, -o); } }
 module ring_2d(o = 0) { translate(porthole) difference() { circle(r = porthole_r[1] + o); circle(r = porthole_r[0] - o); } }
 
+// grooves under the recess edges, one per nub (lid coordinates)
+module inlay_grooves_2d() {
+    for (i = [0, 1], c = frame_clips(i)) place(c) translate([0.3, 0]) groove_2d();
+    for (c = badge_clips()) translate(badge_c) place(c) translate([0.3, 0]) groove_2d();
+    for (c = ring_nubs()) translate(porthole) place(c) groove_2d();
+    for (c = stripe_nubs()) place(c) groove_2d(stripe_d);
+}
+
+// Lid hold-downs: leaning 45 deg towards the far wall, tip on the bare PCB next to the radio module
+module hold_downs() {
+    for (p = [[x_node, nodemcu], [x_esp, esp32]], s = [-1, 1]) {
+        x0 = wall + p[0] + s*(p[1][0]/2 - 3.0) - 1.25;
+        yt = wall + usb_margin + p[1][1] - 3.5;
+        zt = -(inner_d - cable_h - pcb_t) - hold_press;
+        hull() {
+            translate([x0, yt, zt]) cube([2.5, 1.7, 0.01]);
+            translate([x0, yt - zt, -0.01]) cube([2.5, 1.7, 0.11]);
+        }
+    }
+}
+
 // Lid in mounted orientation (face side up, z = 0 is where it sits on the body)
-module lid() {
+module lid(with_hold_downs = true) {
     difference() {
         union() {
             hull() {
-                linear_extrude(0.01) outer_2d();
-                translate([0, 0, lid_t - 0.01]) linear_extrude(0.01) offset(delta = -chamfer) outer_2d();
+                linear_extrude(0.01) outline_2d();
+                translate([0, 0, lid_t - 0.01]) linear_extrude(0.01) offset(delta = -chamfer) outline_2d();
             }
             // lip that reaches into the body
             translate([0, 0, -lip_h]) linear_extrude(lip_h + 0.1) difference() {
@@ -217,22 +391,22 @@ module lid() {
             }
             // snap latches matching the recesses (0.1 mm into the lip: one solid)
             for (x = [wall + fit - 0.5, outer_w - wall - fit - 0.1]) translate([x, outer_h/2 - 7, -2.0]) cube([0.6, 14, 0.8]);
-            // hold-downs: press the PCBs onto the support at the antenna end
-            for (p = [[x_node, nodemcu], [x_esp, esp32]], s = [-1, 1])
-                translate([wall + p[0] + s*(p[1][0]/2 - 1.6) - 1.25, wall + usb_margin + p[1][1] - 3.5, -(inner_d - cable_h - pcb_t)])
-                    cube([2.5, 3, inner_d - cable_h - pcb_t + 0.1]);
+            if (with_hold_downs) hold_downs();
         }
-        // recesses for the brown parts
+        // recesses for the brown parts, with a groove under the edge for every clip nub
         translate([0, 0, lid_t - recess]) linear_extrude(recess + 1) {
             ring_2d(inlay_gap);
             offset(r = inlay_gap) stripe_2d();
             translate(badge_c) offset(r = inlay_gap) badge_2d();
             light_frames_2d(inlay_gap);
         }
+        translate([0, 0, lid_t - recess - 0.01]) linear_extrude(clip_h + 0.11) inlay_grooves_2d();
         // atom emblem in the porthole, engraved 0.6 mm
         translate([0, 0, lid_t - 0.6]) linear_extrude(1) translate(porthole) atom_2d();
-        // indicator lights: lid thinned to 0.6 mm inside the frame (from the inside) -- the LED shines through
-        for (i = [0, 1]) translate([0, 0, -0.01]) linear_extrude(lid_t - 0.6 + 0.01) band_2d(i, -inlay_gap);
+        // indicator lights: lid thinned to 0.6 mm from the inside. The thin skin stays skin_overlap smaller than
+        // the frame recess -- otherwise it touches the rest of the lid only along an edge and falls out as a
+        // loose plate (first print, 2026-10-29: two holes instead of two lights).
+        for (i = [0, 1]) translate([0, 0, -0.01]) linear_extrude(lid_t - 0.6 + 0.01) band_2d(i, -inlay_gap - skin_overlap);
         // board letters next to the lights
         translate([0, 0, lid_t - 0.6]) linear_extrude(1) {
             translate([wall + x_node - band_w[0]/2 - band_frame - 4, (band_y[0] + band_y[1])/2]) lettering_b();
@@ -242,20 +416,30 @@ module lid() {
 }
 
 // ---- Brown parts, print-ready (lying flat) --------------------------------------------------
-module porthole_ring() {   // ring with chamfers, centred on the origin
+module porthole_ring() {   // ring with chamfers, centred on the origin; three clip tongues on the outer edge
     difference() {
         hull() { cylinder(r = porthole_r[1], h = 0.01); translate([0, 0, inlay_t - 0.01]) cylinder(r = porthole_r[1] - 0.6, h = 0.01); }
         translate([0, 0, -0.01]) hull() { cylinder(r = porthole_r[0], h = 0.01); translate([0, 0, inlay_t + 0.02]) cylinder(r = porthole_r[0] + 0.9, h = 0.01); }
+        translate([0, 0, -1]) linear_extrude(inlay_t + 2) ring_tongue_cut_2d();
     }
+    for (c = ring_nubs()) place(c) nub();
 }
-module stripe_part() { linear_extrude(inlay_t) stripe_2d(); }
+module stripe_part() {
+    difference() {
+        linear_extrude(inlay_t) stripe_2d();
+        for (i = [0:2]) translate([stripe_x[i] - 1, porthole[1] + stripe_dy[i] - stripe_slit/2, -1]) cube([clip_L + 1, stripe_slit, inlay_t + 2]);
+    }
+    for (c = stripe_nubs()) place(c) nub(stripe_d);
+}
 // Two-colour badge: brown plate, beige lettering inlaid 0.6 mm deep (centred on the origin, face side up).
 // It is printed face side down: the colour change happens only in the first 0.6 mm.
 module badge_part() {
     difference() {
         linear_extrude(inlay_t) badge_2d();
         translate([0, 0, inlay_t - 0.6]) linear_extrude(1) lettering_name();
+        translate([0, 0, -1]) linear_extrude(inlay_t + 2) for (c = badge_clips()) place(c) tongue_cut_2d();
     }
+    for (c = badge_clips()) place(c) translate([0.3, 0]) nub();
 }
 module badge_text() { translate([0, 0, inlay_t - 0.6]) linear_extrude(0.6) lettering_name(); }
 module light_frame(i) {   // frame around the light band of board i, in lid coordinates
@@ -265,57 +449,73 @@ module light_frame(i) {   // frame around the light band of board i, in lid coor
             translate([0, 0, inlay_t + 0.6 - 0.01]) linear_extrude(0.01) band_2d(i, band_frame - 0.6);
         }
         translate([0, 0, -0.01]) linear_extrude(inlay_t + 1) band_2d(i);
+        translate([0, 0, -1]) linear_extrude(inlay_t + 3) for (c = frame_clips(i)) place(c) tongue_cut_2d();
     }
+    for (c = frame_clips(i)) place(c) translate([0.3, 0]) nub();
 }
-// Tail fin in profile (seen from the front, x = outwards, y = up). The tenon sits in the side wall.
+// Tail fin in profile (seen from the front, x = outwards, y = up). The snap tenon sits in the side wall.
 function bez(p0, p1, p2, t) = (1-t)*(1-t)*p0 + 2*(1-t)*t*p1 + t*t*p2;
 module fin_2d() {
     leading  = [for (t = [0:0.1:1]) bez([0, fin_root[1]], [11, 27], [17, -10], t)];   // leading edge, curved
     trailing = [for (t = [1:-0.1:0]) bez([0, fin_root[0]], [9, 6], [17, -10], t)];    // trailing edge
-    polygon(concat(leading, [[19, -11]], trailing));
-    translate([-wall, fin_root[0]]) square([wall + 0.5, fin_root[1] - fin_root[0]]);
+    difference() {
+        polygon(concat(leading, [[19, -11]], trailing));
+        translate([0, snap_y[0]]) mirror([1, 0]) snap_relief_2d(snap_len, side_snap);
+    }
+    translate([0, snap_y[0]]) mirror([1, 0]) snap_tenon_2d(snap_len, wall, side_snap);
 }
 module fin_part() { linear_extrude(fin_t) fin_2d(); }
-// Saturn: planet with a tilted ring on a mast; the tenon goes through the top wall
+module fin_mounted() { translate([outer_w, 0, fin_z - fin_t/2]) fin_part(); }
+// Saturn: planet with a tilted ring on a mast; the snap tenon goes through the top wall
 module saturn_2d() {
-    translate([0, 25]) {
-        circle(r = 7.5);
-        rotate(-18) difference() { scale([1, 0.32]) circle(r = 17); scale([1, 0.32]) circle(r = 13.5); }
+    difference() {
+        union() {
+            translate([0, 25]) {
+                circle(r = 7.5);
+                rotate(-18) difference() { scale([1, 0.32]) circle(r = 17); scale([1, 0.32]) circle(r = 13.5); }
+            }
+            translate([-1.5, 0]) square([3, 20]);
+            translate([-4, 0]) square([8, saturn_foot]);        // foot, rests on the capsule
+        }
+        translate([-4, 0]) rotate(-90) snap_relief_2d(8, sat_snap);
     }
-    translate([-1.5, -wall]) square([3, 20 + wall]);
-    translate([-4, 0]) square([8, 2]);                  // foot, rests on the capsule
+    translate([-4, 0]) rotate(-90) snap_tenon_2d(8, wall, sat_snap);
 }
 module saturn_part() { linear_extrude(saturn_t) saturn_2d(); }
+module saturn_mounted() { translate([outer_w/2, outer_h, fin_z - saturn_t/2]) saturn_part(); }
 
 // Quiver in mounted orientation: short tube on the outside of the left wall for the pen cap, funnel at
 // the top, floor with a hole at the bottom. Two narrow decorative rings like on a rocket silo.
-// Printed upright: tube and funnel (45 deg) need no supports.
+// Printed upright: tube and funnel need no supports. The snap prongs then lie horizontally, so their
+// bending stress still runs along the filament.
+module quiver_outer() {   // everything except web and tenon: keeps quiver_clear from the wall
+    translate([quiver_x, quiver_y[0], fin_z]) rotate([-90, 0, 0])
+        cylinder(r = quiver_ra, h = quiver_y[1] - quiver_y[0] - funnel_h);
+    // funnel: widens upwards on the outside, flat towards the wall
+    intersection() {
+        translate([quiver_x, quiver_y[1] - funnel_h, fin_z]) rotate([-90, 0, 0])
+            cylinder(r1 = quiver_ra, r2 = quiver_ra + funnel_h*0.6, h = funnel_h);
+        translate([-100, quiver_y[1] - funnel_h - 1, fin_z - 50]) cube([100 - quiver_clear, funnel_h + 2, 100]);
+    }
+    // decorative rings (0.8 mm proud, 45 deg chamfer underneath)
+    for (y = [quiver_y[0] + 4, quiver_y[1] - funnel_h - 6])
+        translate([quiver_x, y, fin_z]) rotate([-90, 0, 0]) {
+            cylinder(r1 = quiver_ra, r2 = quiver_ra + 0.8, h = 0.8);
+            translate([0, 0, 0.8]) cylinder(r = quiver_ra + 0.8, h = 1.6);
+        }
+}
 module quiver() {
     difference() {
         union() {
-            // tube
-            translate([quiver_x, quiver_y[0], fin_z]) rotate([-90, 0, 0])
-                cylinder(r = quiver_ra, h = quiver_y[1] - quiver_y[0] - funnel_h);
-            // funnel: widens 45 deg upwards on the outside
-            intersection() {   // flat towards the wall: otherwise it reached 23 mm^3 into the side wall
-                translate([quiver_x, quiver_y[1] - funnel_h, fin_z]) rotate([-90, 0, 0])
-                    cylinder(r1 = quiver_ra, r2 = quiver_ra + funnel_h*0.6, h = funnel_h);
-                translate([-100, quiver_y[1] - funnel_h - 1, fin_z - 50]) cube([100 - 0.3, funnel_h + 2, 100]);
+            quiver_outer();
+            // web to the wall, full length, freed around the snap prongs
+            difference() {
+                translate([quiver_x, fin_root[0] - 4, fin_z - 2]) cube([-quiver_x, fin_root[1] - fin_root[0] + 4, 4]);
+                at_left_wall() translate([0, 0, -2.5]) linear_extrude(5) snap_relief_2d(snap_len, side_snap);
             }
-            // decorative rings (1 mm proud, 45 deg chamfer underneath)
-            for (y = [quiver_y[0] + 4, quiver_y[1] - funnel_h - 6])
-                translate([quiver_x, y, fin_z]) rotate([-90, 0, 0]) {
-                    cylinder(r1 = quiver_ra, r2 = quiver_ra + 0.8, h = 0.8);
-                    translate([0, 0, 0.8]) cylinder(r = quiver_ra + 0.8, h = 1.6);
-                }
-            // web to the wall, full length
-            // the web ends at the wall (x = 0): 0.01 mm beyond it gave a 0.31 mm^3 collision outside the slot
-            translate([quiver_x, fin_root[0] - 4, fin_z - 2]) cube([-quiver_x, fin_root[1] - fin_root[0] + 4, 4]);
-            // tenon into the slot of the left wall
-            for (z = [fin_root]) translate([0, z[0], fin_z - fin_t/2])
-                translate([-0.5, 0, 0]) cube([wall + 1, z[1] - z[0], fin_t]);   // no chamfer (it hit the wall); 0.5 mm inside the web
+            at_left_wall() translate([0, 0, -fin_t/2]) linear_extrude(fin_t) snap_tenon_2d(snap_len, wall, side_snap);
         }
-        // bore down to the floor, funnel inside at the top 45 deg
+        // bore down to the floor, funnel inside at the top
         translate([quiver_x, quiver_y[0] + floor_t, fin_z]) rotate([-90, 0, 0])
             cylinder(r = quiver_ri, h = quiver_y[1] - quiver_y[0]);
         translate([quiver_x, quiver_y[1] - funnel_h, fin_z]) rotate([-90, 0, 0])
@@ -326,10 +526,49 @@ module quiver() {
 module pen_dummy() { translate([quiver_x, quiver_y[0] + floor_t, fin_z]) rotate([-90, 0, 0]) cylinder(d = pen_d, h = pen_l); }
 
 module hook_profile() {
-    translate([-tenon_t, 0]) square([tenon_t + pegboard_t, web_h]);
-    translate([pegboard_t, -leg_l]) square([leg_t, web_h + leg_l]);
+    difference() {
+        union() {
+            square([pegboard_t, web_h]);
+            translate([pegboard_t, -leg_l]) square([leg_t, web_h + leg_l]);
+        }
+        mirror([1, 0]) snap_relief_2d(web_h, hook_snap);
+    }
+    mirror([1, 0]) snap_tenon_2d(web_h, back_t, hook_snap);
 }
 module hook() { linear_extrude(hook_w) hook_profile(); }
+module hooks_mounted() { for (s = [-1, 1]) translate([outer_w/2 + s*hook_spacing/2 - hook_w/2, hook_y, 0]) rotate([0, 90, 0]) hook(); }
+
+// USB selector plate, flat (u along the case, w up, outer face on top)
+module slider_2d() {
+    difference() {
+        square([sl_len, sl_h]);
+        for (wu = [sl_left, sl_left + (xe - xn) - sl_s]) translate([wu - sl_ww/2, usb_z0 - sl_z0 - sl_lift]) square([sl_ww, sl_h]);
+        for (u = [-1, sl_len - sl_tongue]) translate([u, 3]) square([sl_tongue + 1, 0.8]);   // detent tongues
+    }
+}
+module slider_part() {
+    linear_extrude(sl_t) slider_2d();
+    // detent bumps: half cones -- sloped below and sideways (click in, slide out of a detent), flat on top
+    for (u = [1.5, sl_len - 1.5]) translate([u, 1.5, sl_t - 0.01]) intersection() {
+        cylinder(d1 = 2.6, d2 = 0.2, h = 1.21, $fn = 24);
+        translate([-2, -2.5, -0.1]) cube([4, 2.5, 2]);
+    }
+    // knob with ribs (grip from below)
+    translate([sl_len/2 - 4, skin_top + 1 - sl_z0 - sl_lift, sl_t - 0.01]) {
+        cube([8, 5, 2.21]);
+        for (k = [0:3]) translate([0.5 + k*2, 0, 2.2]) cube([1, 5, 0.6]);
+    }
+}
+module slider(pos = 0) { translate([sl_x0 + pos*sl_s, -0.2, sl_z0 + sl_lift]) rotate([90, 0, 0]) slider_part(); }
+
+// lid inlays in lid coordinates (for the checks and the preview)
+module inlays() {
+    z0 = lid_t - recess;
+    translate([porthole[0], porthole[1], z0]) porthole_ring();
+    translate([0, 0, z0]) stripe_part();
+    translate([badge_c[0], badge_c[1], z0]) badge_part();
+    for (i = [0, 1]) translate([0, 0, z0]) light_frame(i);
+}
 
 // =============================================================================================
 beige = "#e8d9b5"; brown = "#6b4a2e";
@@ -340,24 +579,22 @@ if (part == "ring")  porthole_ring();
 if (part == "stripe") stripe_part();
 if (part == "badge") rotate([180, 0, 0]) translate([0, 0, -inlay_t]) badge_part();       // face side down
 if (part == "badge_text") rotate([180, 0, 0]) translate([0, 0, -inlay_t]) badge_text();
-if (part == "light_frames") for (i = [0, 1]) translate([-wall - [x_node, x_esp][i] + i*30, -band_y[0], 0]) light_frame(i);
+if (part == "light_frames") for (i = [0, 1]) translate([-wall - [x_node, x_esp][i] + i*36, -band_y[0], 0]) light_frame(i);
 if (part == "fin")   fin_part();                         // right side only -- the quiver sits on the left
 if (part == "quiver") translate([0, 0, -quiver_y[0]]) rotate([90, 0, 0]) quiver();   // upright: floor on the bed
 if (part == "saturn") saturn_part();
+if (part == "slider") slider_part();
 module assembled_beige() {
     body();
     translate([0, 0, body_t]) lid();
-    for (s = [-1, 1]) translate([outer_w/2 + s*hook_spacing/2 - hook_w/2, hook_y, 0]) rotate([0, 90, 0]) hook();
+    hooks_mounted();
 }
 module assembled_brown() {
-    z0 = body_t + lid_t - recess;
-    translate([porthole[0], porthole[1], z0]) porthole_ring();
-    translate([0, 0, z0]) stripe_part();
-    translate([badge_c[0], badge_c[1], z0]) badge_part();
-    for (i = [0, 1]) translate([0, 0, z0]) light_frame(i);
+    translate([0, 0, body_t]) inlays();
     quiver();                                                                      // left: quiver for the loupe pen
-    translate([outer_w, 0, fin_z - fin_t/2]) fin_part();                           // right
-    translate([outer_w/2, outer_h, fin_z - saturn_t/2]) saturn_part();
+    fin_mounted();                                                                 // right
+    saturn_mounted();
+    slider(0);                                                                     // bottom: USB selector at RUN
 }
 module assembled_text() {
     translate([badge_c[0], badge_c[1], body_t + lid_t - recess]) badge_text();

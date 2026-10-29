@@ -140,7 +140,8 @@ More: [docs/identification.md](docs/identification.md).
 <p align="center"><img src="docs/images/case_front.png" alt="Atomic-age capsule case with porthole, fin and a quiver for the loupe" width="70%"></p>
 
 A 1950s "atomic age capsule" for an IKEA Skådis pegboard: porthole with an atom, speed stripes, a tail fin, a little
-Saturn — and a quiver that holds the loupe. Beige with brown accents, ~80 g of PLA, no supports.
+Saturn — and a quiver that holds the loupe. Beige with brown accents, ~88 g of PLA, no supports, no glue:
+every part clicks in. A slider under the bottom opens only one USB socket at a time.
 OpenSCAD source, STL and a ready 3MF: [enclosure/](enclosure/).
 
 ## What is tested
@@ -159,7 +160,7 @@ OpenSCAD source, STL and a ready 3MF: [enclosure/](enclosure/).
 | Home-network mode on hardware; settings kept across the firmware update | ✅ measured |
 | Part identification from the browser against LM Studio (page served by the board, test image): SOIC-8 "LM358", high confidence, 5.3 s | ✅ measured |
 | Part identification with the real loupe on a phone | ⏳ in progress |
-| Printed case | ⏳ not printed yet |
+| Printed case | first version printed 2026-10-29: windows printed as holes, quiver jammed, parts needed glue → all fixed in case 2; case 2 ⏳ not printed yet |
 
 ## Repository
 

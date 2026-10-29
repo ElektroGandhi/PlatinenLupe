@@ -1,6 +1,8 @@
 // Check model: dummies for both boards inside the case, collisions as intersections.
 // One call per check: openscad -o x.stl -D 'check="..."' check.scad
 //   "Current top level object is empty" = no overlap (wanted for collision_*).
+//   contact_*, blocked_*, retention_* must NOT be empty: retention_* moves a part 0.3-0.5 mm against its
+//   snap direction -- only a barb, nub or latch that really catches gives an overlap.
 // All assumptions about the boards are collected here; anything not confirmed is marked.
 
 include <platinenlupe_case.scad>
@@ -19,14 +21,14 @@ usbc   = [8.94, 7.35, 3.26];   // USB-C socket w x d x h (standard Type-C socket
 button = [6.0, 3.5, 3.5];      // buttons next to the USB socket (EN/BOOT or RST/FLASH), typical value
 dupont = [2.6, 2.6, 14.0];     // Dupont socket, pushed on up to the plastic of the pin header
 plug   = [12.4, 6.5];          // USB-C plug including strain relief, common size
+metal  = [8.4, 2.6];           // bare metal shell of a USB-C plug (USB-C spec 8.25 x 2.4 + tolerance)
 
 pcb_z = back_t + cable_h;      // PCB underside
 function y0(pcb) = wall + usb_margin;
 
-module board(b) {
+module pcb(b) { translate([wall + b[0] - b[1][0]/2, y0(b[1]), pcb_z]) cube([b[1][0], b[1][1], pcb_t]); }
+module parts_on(b) {
     mx = wall + b[0]; pcb = b[1]; row = b[2]; n = b[3]; mod = b[4];
-    // PCB
-    translate([mx - pcb[0]/2, y0(pcb), pcb_z]) cube([pcb[0], pcb[1], pcb_t]);
     // pin headers: plastic under the PCB, pins 6 mm below -- centred along the length (assumption)
     l_row = n * 2.54; ys = y0(pcb) + (pcb[1] - l_row)/2;
     for (s = [-1, 1]) {
@@ -41,21 +43,47 @@ module board(b) {
     // buttons left and right of the socket
     for (s = [-1, 1]) translate([mx + s*(usbc[0]/2 + 1.5 + button[0]/2) - button[0]/2, y0(pcb) + 1, pcb_z + pcb_t]) cube(button);
 }
+module board(b) { pcb(b); parts_on(b); }
 module boards() { for (b = boards) board(b); }
+module pcbs() { for (b = boards) pcb(b); }
+module board_parts() { for (b = boards) parts_on(b); }
 
-module plug_path() {   // USB-C plug from outside up to the socket
-    for (b = boards) translate([wall + b[0] - plug[0]/2, -40, pcb_z + pcb_t + usbc[2]/2 - plug[1]/2]) cube([plug[0], 40 + y0(b[1]) - 1 - 0.01, plug[1]]);
+// plug from outside up to the socket front; size = plug (with strain relief) or metal (bare shell)
+module plug_at(b, size) {
+    translate([wall + b[0] - size[0]/2, -40, pcb_z + pcb_t + usbc[2]/2 - size[1]/2]) cube([size[0], 40 + y0(b[1]) - 1 - 0.01, size[1]]);
 }
-module lid_mounted() { translate([0, 0, body_t]) lid(); }
-module hold_down_contact() {   // thin layer directly above each PCB
-    for (b = boards) translate([wall + b[0] - b[1][0]/2, y0(b[1]), pcb_z + pcb_t]) cube([b[1][0], b[1][1], 0.15]);
-}
+module plug_path() { for (b = boards) plug_at(b, plug); }
+module lid_mounted(h = true) { translate([0, 0, body_t]) lid(h); }
+module hold_downs_mounted() { translate([0, 0, body_t]) hold_downs(); }
+module attached() { fin_mounted(); quiver(); saturn_mounted(); hooks_mounted(); }
 
-if (check == "collision_body")     intersection() { body(); boards(); }
-if (check == "collision_lid")      intersection() { lid_mounted(); boards(); }
-if (check == "collision_plug")     intersection() { union() { body(); lid_mounted(); } plug_path(); }
-if (check == "collision_lid_body") intersection() { body(); lid_mounted(); }
-if (check == "collision_quiver")   intersection() { body(); quiver(); }
-if (check == "collision_pen")      intersection() { quiver(); pen_dummy(); }
-if (check == "contact_hold_downs") intersection() { lid_mounted(); hold_down_contact(); }   // must NOT be empty
-if (check == "boards")             boards();
+// ---- boards and lid
+if (check == "collision_body")      intersection() { body(); boards(); }
+if (check == "retention_boards")    intersection() { body(); translate([0, 0, 0.3]) pcbs(); }      // latches catch the PCB
+if (check == "collision_lid")       { intersection() { lid_mounted(false); boards(); } intersection() { hold_downs_mounted(); board_parts(); } }
+if (check == "contact_hold_downs")  intersection() { hold_downs_mounted(); pcbs(); }               // must NOT be empty
+if (check == "collision_lid_body")  intersection() { body(); lid_mounted(); }
+// ---- parts that click into the walls
+if (check == "collision_parts_body")   intersection() { body(); attached(); }
+if (check == "collision_parts_boards") intersection() { boards(); attached(); }
+if (check == "retention_fin")       intersection() { body(); translate([0.5, 0, 0]) fin_mounted(); }
+if (check == "retention_quiver")    intersection() { body(); translate([-0.5, 0, 0]) quiver(); }
+if (check == "retention_saturn")    intersection() { body(); translate([0, 0.5, 0]) saturn_mounted(); }
+if (check == "retention_hooks")     intersection() { body(); translate([0, 0, -0.5]) hooks_mounted(); }
+// the quiver must stay quiver_clear away from the wall everywhere except its web (the funnel jammed at 0.3 mm)
+if (check == "clearance_quiver")    intersection() { body(); translate([quiver_clear - 0.01, 0, 0]) quiver_outer(); }
+if (check == "collision_pen")       intersection() { quiver(); pen_dummy(); }
+// ---- inlays in the lid (lid coordinates)
+if (check == "collision_inlays")    intersection() { lid(); inlays(); }
+if (check == "retention_inlays")    intersection() { lid(); translate([0, 0, 0.4]) inlays(); }
+// ---- USB selector: RUN = NodeMCU free, FLASH = ESP32 free, never both
+if (check == "collision_slider_run")   intersection() { body(); slider(0); }
+if (check == "collision_slider_flash") intersection() { body(); slider(1); }
+if (check == "retention_slider")    intersection() { body(); translate([0, 0, 0.4]) slider(0); }
+if (check == "collision_plug_run")  intersection() { union() { body(); lid_mounted(); slider(0); } plug_at(boards[0], plug); }
+if (check == "collision_plug_flash") intersection() { union() { body(); lid_mounted(); slider(1); } plug_at(boards[1], plug); }
+if (check == "blocked_esp_run")     intersection() { slider(0); plug_at(boards[1], metal); }      // must NOT be empty
+if (check == "blocked_node_flash")  intersection() { slider(1); plug_at(boards[0], metal); }
+if (check == "blocked_node_mid")    intersection() { slider(0.5); plug_at(boards[0], metal); }
+if (check == "blocked_esp_mid")     intersection() { slider(0.5); plug_at(boards[1], metal); }
+if (check == "boards")              boards();

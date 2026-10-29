@@ -139,7 +139,8 @@ Mehr: [docs/identification.md](docs/identification.md).
 <p align="center"><img src="docs/images/case_front.png" alt="Atomzeit-Kapsel mit Bullauge, Heckflosse und Köcher für die Lupe" width="70%"></p>
 
 Eine „Atomzeit-Kapsel“ im Stil der 50er für die IKEA-Skådis-Lochwand: Bullauge mit Atom, Tempostreifen, Heckflosse,
-ein kleiner Saturn – und ein Köcher für die Lupe. Beige mit braunen Akzenten, ~80 g PLA, ohne Stützen.
+ein kleiner Saturn – und ein Köcher für die Lupe. Beige mit braunen Akzenten, ~88 g PLA, ohne Stützen, ohne Kleber:
+jedes Teil rastet ein. Ein Schieber an der Unterseite gibt immer nur eine USB-Buchse frei.
 OpenSCAD-Quelle, STL und fertige 3MF: [enclosure/](enclosure/).
 
 ## Was geprüft ist
@@ -158,7 +159,7 @@ OpenSCAD-Quelle, STL und fertige 3MF: [enclosure/](enclosure/).
 | Heimnetz-Modus an der Hardware; Einstellungen überstehen das Firmware-Update | ✅ gemessen |
 | Bauteil-Bestimmung aus dem Browser gegen LM Studio (Seite vom Board, Testbild): SOIC-8 „LM358“, hohe Sicherheit, 5,3 s | ✅ gemessen |
 | Bauteil-Bestimmung mit echter Lupe am Handy | ⏳ in Arbeit |
-| Gedrucktes Gehäuse | ⏳ noch nicht gedruckt |
+| Gedrucktes Gehäuse | erste Fassung am 29.10.2026 gedruckt: Fenster als Löcher, Köcher klemmte, Teile mussten geklebt werden → in Fassung 2 behoben; Fassung 2 ⏳ noch nicht gedruckt |
 
 ## Häufige Fragen
 

@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased — case 2
+
+After the first real print (2026-10-29). Case only, no firmware change.
+
+- **No glue any more.** Every part clicks in: snap prongs for fin, quiver, Saturn and hooks; clip tongues
+  for ring, stripes, badge and light frames; each tongue checked to ≤ 2 % bending strain.
+- **Boards latch into the body** (four arms per board over the PCB edge): the Dupont plugs cannot push
+  them up, with or without the lid. Hold-downs in the lid now lean 45° and press 0.2 mm as a second safety.
+- **USB slider** under the bottom: only one USB socket is open at a time (RUN = NodeMCU, FLASH = ESP32),
+  so two power supplies cannot meet. Two click positions, engraved labels. The case now stands on a plinth.
+- **Light windows fixed:** the 0.6 mm skin only touched the lid along an edge and printed as a loose plate
+  (two holes instead of two lights). It now reaches 1.2 mm under the full lid.
+- **Quiver** moved 4.5 mm away from the wall: its flared top jammed against the wall when plugging it in.
+- Clearance in all slots and recesses 0.2 mm (was 0.15).
+- `build.py`: counts bodies layer by layer as the printer sees them (catches edge-only contact), plus
+  retention, clearance and "plug blocked" checks — 24 in total.
+
 ## 1.2.0 — 2026-10-30
 
 Faster picture, measured on the real boards.

@@ -2,7 +2,7 @@
 
   python build.py [--work DIR] [--print-dir DIR] [--no-slice]
 
-Needs: OpenSCAD, Python with trimesh + matplotlib (+ numpy). Bambu Studio for the optional test slice.
+Needs: OpenSCAD, Python with trimesh + matplotlib + numpy + shapely. Bambu Studio for the optional test slice.
 
 Tool commands (both may contain arguments, they are split like a shell would):
   OPENSCAD       default: `openscad` on PATH, else `flatpak run org.openscad.OpenSCAD`,
@@ -27,20 +27,37 @@ import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+import numpy as np
+
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE / "tools"))
 
 # printable parts -> expected number of separate solids. If it differs, something is loose or fused.
 PRINT_PARTS = {"body": 1, "lid": 1, "hooks": 2, "ring": 1, "stripe": 1, "badge": 1,
-               "badge_text": 12, "light_frames": 2, "fin": 1, "saturn": 1, "quiver": 1}
+               "badge_text": 12, "light_frames": 2, "fin": 1, "saturn": 1, "quiver": 1, "slider": 1}
 ASSEMBLED = ["assembled_beige", "assembled_brown", "assembled_text", "assembled_pen"]
 
-# Collision checks with dummies for both boards (check.scad). Volume of the intersection in mm^3:
-# "collision" must be ~0 (touching faces do not count), "contact" must be > 0 (hold-downs rest on the PCBs).
-CHECKS = [("collision_body", "collision"), ("collision_lid", "collision"),
-          ("collision_plug", "collision"), ("collision_lid_body", "collision"),
-          ("collision_quiver", "collision"), ("collision_pen", "collision"),
-          ("contact_hold_downs", "contact")]
+# Checks with dummies for both boards (check.scad). Volume of the intersection in mm^3:
+#   collision  must be ~0 (touching faces do not count)
+#   contact    must be > 0.5 (hold-downs press on the PCBs)
+#   blocked    must be > 0.5 (a USB-C plug in a covered opening hits the slider)
+#   retention  must be > 0.2 (the part, moved against its snap, hits a barb/nub/latch: it cannot fall out).
+#              Real snaps give 0.45 mm^3 and more; with the nubs taken away 0.06 remains (chord of the ring nub).
+CHECKS = [("collision_body", "collision"), ("retention_boards", "retention"),
+          ("collision_lid", "collision"), ("contact_hold_downs", "contact"),
+          ("collision_lid_body", "collision"),
+          ("collision_parts_body", "collision"), ("collision_parts_boards", "collision"),
+          ("retention_fin", "retention"), ("retention_quiver", "retention"),
+          ("retention_saturn", "retention"), ("retention_hooks", "retention"),
+          ("clearance_quiver", "collision"), ("collision_pen", "collision"),
+          ("collision_inlays", "collision"), ("retention_inlays", "retention"),
+          ("collision_slider_run", "collision"), ("collision_slider_flash", "collision"),
+          ("retention_slider", "retention"),
+          ("collision_plug_run", "collision"), ("collision_plug_flash", "collision"),
+          ("blocked_esp_run", "blocked"), ("blocked_node_flash", "blocked"),
+          ("blocked_node_mid", "blocked"), ("blocked_esp_mid", "blocked")]
+LIMITS = {"collision": lambda v: v < 0.05, "contact": lambda v: v > 0.5,
+          "blocked": lambda v: v > 0.5, "retention": lambda v: v > 0.2}
 
 
 def tool(env: str, cli: str | None, candidates: list[list[str]]) -> list[str] | None:
@@ -84,13 +101,51 @@ def export(scad: list[str], work: Path) -> None:
         raise SystemExit("\n".join(errors))
 
 
+def layer_bodies(mesh, pitch: float = 0.1, min_area: float = 0.05) -> int:
+    """Number of bodies as the printer sees them: slice into layers, link islands that overlap the next layer.
+
+    trimesh's split() counts two solids as one when they touch along a single edge. That is how the 0.6 mm
+    light skin of the first lid (2026-10-29) passed: it met the lid only along its outline and printed as a
+    loose plate. Here an edge contact links nothing -- the overlap area between layers is zero.
+    """
+    from shapely.strtree import STRtree
+    z0, z1 = mesh.bounds[:, 2]
+    heights = np.arange(z0 + pitch / 2, z1, pitch)
+    sections = mesh.section_multiplane(plane_origin=[0, 0, 0], plane_normal=[0, 0, 1], heights=heights)
+    # slivers without area are artefacts of slicing exactly through a face -- not islands
+    layers = [[] if s is None else [p.buffer(0) for p in s.polygons_full if p.area > min_area] for s in sections]
+    parent: dict = {}
+
+    def find(a):
+        while parent[a] != a:
+            parent[a] = parent[parent[a]]
+            a = parent[a]
+        return a
+
+    for i, polys in enumerate(layers):
+        for j in range(len(polys)):
+            parent[(i, j)] = (i, j)
+    for i in range(len(layers) - 1):
+        below, above = layers[i], layers[i + 1]
+        if not below or not above:
+            continue
+        tree = STRtree(above)
+        for j, p in enumerate(below):
+            for k in tree.query(p):
+                if p.intersection(above[int(k)]).area > min_area:
+                    parent[find((i, j))] = find((i + 1, int(k)))
+    return len({find(n) for n in parent})
+
+
 def check_meshes(work: Path) -> None:
     import trimesh
     for part, expected in PRINT_PARTS.items():
         m = trimesh.load(work / f"{part}.stl")
         found = len(m.split(only_watertight=False))
-        if not m.is_watertight or found != expected:
-            raise SystemExit(f"{part}: watertight={m.is_watertight}, {found} solids instead of {expected}")
+        layered = layer_bodies(m)
+        if not m.is_watertight or found != expected or layered != expected:
+            raise SystemExit(f"{part}: watertight={m.is_watertight}, {found} solids / {layered} printed bodies "
+                             f"instead of {expected}")
         print(f"  {part:15} {' x '.join(f'{x:.1f}' for x in m.extents)} mm, {m.volume / 1000:.2f} cm^3")
 
 
@@ -112,8 +167,8 @@ def check_collisions(scad: list[str], work: Path) -> None:
         results = list(pool.map(one, CHECKS))
     failed = []
     for name, kind, vol in results:
-        ok = vol < 0.05 if kind == "collision" else vol > 0.5
-        print(f"  {name:22} {vol:8.2f} mm^3  {'ok' if ok else 'FAIL'}")
+        ok = LIMITS[kind](vol)
+        print(f"  {name:24} {kind:9} {vol:8.2f} mm^3  {'ok' if ok else 'FAIL'}")
         if not ok:
             failed.append(name)
     if failed:
@@ -128,7 +183,7 @@ def project(work: Path, print_dir: Path) -> Path:
     p.plate("Brown", [("Porthole ring", s("ring"), 2), ("Speed stripes", s("stripe"), 2),
                       ("Light frames", s("light_frames"), 2), ("Tail fin", s("fin"), 2),
                       ("Quiver", s("quiver"), 2),
-                      ("Saturn", s("saturn"), 2)])
+                      ("Saturn", s("saturn"), 2), ("USB selector", s("slider"), 2)])
     p.plate("Badge", [("Badge", [("Plate", s("badge"), 2), ("Lettering", s("badge_text"), 1)])])
     target = work / "platinenlupe_case.3mf"
     p.write(target)

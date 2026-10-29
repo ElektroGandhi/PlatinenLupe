@@ -12,6 +12,10 @@ The quiver on the left holds the loupe pen. The whole case hangs on an **IKEA Sk
 Colours: beige body, brown accents. Every colour has its own print plate, so there is no filament
 change except on the small two-colour name badge.
 
+**No glue anywhere.** Every part clicks in: the boards latch into the body, the decorations into the
+lid, fin, quiver, Saturn and hooks into the walls. A slider under the bottom opens only **one** USB
+socket at a time, so two power supplies can never meet.
+
 | File | Content |
 |---|---|
 | `platinenlupe_case.scad` | the model; all dimensions are parameters at the top |
@@ -55,6 +59,8 @@ Keep `--work` under `~`, not in `/tmp`.
 
 The ESP32 board size comes from **one** source only. Please measure, enter any difference at the
 top of `platinenlupe_case.scad`, and run `python build.py` again.
+The PCB width matters more than before: the board latches sit 0.2 mm from the PCB edge, so a wrong
+width makes them too tight or too loose.
 
 | What | In the model | Confirmed |
 |---|---|---|
@@ -74,26 +80,34 @@ Open `print/platinenlupe_case.3mf`. Three plates, **no supports**:
 
 | Plate | Parts | Time | Filament |
 |---|---|---|---|
-| 1 Beige | body (back wall down), lid (face side down), 2 hooks | 1 h 48 min | 67.0 g |
-| 2 Brown | porthole ring, speed stripes, 2 light frames, tail fin, Saturn, quiver (upright) | 30 min | 10.4 g |
+| 1 Beige | body (back wall down), lid (face side down), 2 hooks | 2 h 02 min | 71.9 g |
+| 2 Brown | porthole ring, speed stripes, 2 light frames, tail fin, Saturn, quiver (upright), USB slider | 37 min | 13.5 g |
 | 3 Badge | name badge in brown with beige lettering inlaid (face side down, 2 filament changes) | 9 min | 2.6 g |
 
-Sliced with the Bambu Studio CLI, P1S profile, 0.4 mm nozzle, PLA, 0.20 mm layers (2026-10-27).
+Sliced with the Bambu Studio CLI, P1S profile, 0.4 mm nozzle, PLA, 0.20 mm layers (2026-10-29).
 The plain STLs in `print/` work in any slicer.
 
 The two light bands (3–13 mm from the USB end, almost as wide as the PCB) let the board LEDs shine
 through 0.6 mm of beige. The exact LED position is not measured; the band covers the usual area.
 
-## 3. Assembly
+## 3. Assembly — everything clicks, nothing is glued
 
-1. Glue the **hooks** into the two pockets in the back wall with a drop of superglue, leg pointing down.
-2. Press the **brown parts** into the recesses of the lid (0.15 mm clearance). If one is loose: a drop of glue.
-3. **Tail fin** into the right side slot, **quiver** with its tenon into the lower slot on the left,
-   **Saturn** into the slot on top. One drop of glue each.
-4. Put the **boards** in from the front, USB socket down into the notch. Each PCB rests on a support
-   with a small rim at both ends.
-5. **Wire** them (Dupont, female–female), then press the lid on. Its latches snap in, and four
-   hold-downs press the boards onto the supports.
+1. **Hooks**: push each one into its slot in the back wall from behind, leg pointing down, until it
+   clicks. Two prongs catch behind the wall.
+2. **Brown parts on the lid**: lay each one in its recess and press until it clicks. A small tongue at
+   the edge springs back under the rim of the recess.
+3. **Tail fin** into the slot on the right, **quiver** into the slot on the left, **Saturn** into the
+   slot on top: push in until it clicks.
+4. **USB slider**: with the lid off, slide it into the slot under the bottom from above, knob outwards
+   and with the plate at the left end ("RUN"), until it clicks.
+5. **Boards**: put them in from the front, USB socket down into the notch, and press each PCB onto its
+   supports until the four latch arms click over its edge. The Dupont plugs underneath can no longer
+   push it up — with or without the lid. To take a board out, bend the arms outwards a little.
+6. **Wire** them (Dupont, female–female), then press the lid on. Its latches snap in, and four
+   slightly springy hold-downs press on the boards as a second safety.
+
+To take a part off again: fin, quiver, Saturn and hooks by squeezing their two prongs from inside;
+the slider by pushing a pin through one of the small D-shaped holes and lifting it out.
 
 ### Wiring
 
@@ -104,14 +118,22 @@ through 0.6 mm of beige. The exact LED position is not measured; the band covers
 | GND | — | G |
 | VIN | ← | VU (5 V from the NodeMCU's USB) |
 
-### Power rule
+### Power rule and the USB slider
 
 **One** USB-C cable, plugged into the **NodeMCU**, powers both boards: the ESP32 gets 5 V through
 VU → VIN.
 
 - ⚠️ **Never connect two power supplies while VU–VIN is wired.** The case to avoid: a USB cable in
   the ESP32 while the NodeMCU's USB is powered too.
-- Flashing: one board at a time on its own USB cable is fine.
+- The slider under the bottom makes that mechanically impossible. It has two click positions:
+
+| Knob at | Open | Covered | For |
+|---|---|---|---|
+| **RUN** (left, default) | NodeMCU (B) | ESP32 (A) | normal use |
+| **FLASH** (right) | ESP32 (A) | NodeMCU (B) | flashing the ESP32 |
+
+  In every position in between, both openings are narrower than the metal shell of a USB-C plug.
+- Flashing the NodeMCU: slider at RUN, as in normal use.
 
 ## 4. Mounting
 
@@ -122,24 +144,62 @@ Stand the loupe pen **cap down** in the quiver. The quiver is 55 mm deep (cap 50
 so about 90 mm of the pen sticks out at the top to grab it. A 9 mm hole in the floor lets dust fall
 through, and the lens never rests on anything.
 
-## Collision check
+## Snap fits
+
+Every spring tongue is sized for PLA with the cantilever formula ε = 1.5 · t · δ / L² and kept at
+or below 2 %. Each one is an `assert` in `platinenlupe_case.scad`: change a dimension so that a tongue
+would break, and OpenSCAD stops with an error.
+
+| Snap | t | δ | L | ε |
+|---|---|---|---|---|
+| Fin, quiver: 2 prongs each | 1.2 mm | 0.4 mm | 6.4 mm | 1.76 % |
+| Saturn: 2 prongs | 1.0 mm | 0.4 mm | 5.9 mm | 1.72 % |
+| Hooks: 2 prongs each | 1.0 mm | 0.4 mm | 7.0 mm | 1.22 % |
+| Lid parts: tongue at the edge (ring 3, badge 4, each frame 2) | 1.2 mm | 0.4 mm | 6.2 mm | 1.87 % |
+| Speed stripes: split end, 2 prongs per stripe | 0.9 mm | 0.35 mm | 6.2 mm | 1.23 % |
+| Board latches: 4 arms per board | 1.2 mm | 0.7 mm | 12 mm | 0.88 % |
+| USB slider: detent tongue, while sliding it in | 1.6 mm | 1.0 mm | 12.5 mm | 1.54 % |
+
+All slots and recesses have 0.2 mm clearance per side (the first print had 0.15 mm).
+The tongues of the flat parts bend in the print plane, so the filament runs along them. The board
+latch arms stand upright in the body and bend across the layers; that is why they have the lowest
+strain (0.88 %). Their nub overhangs 0.9 mm without support.
+
+## Checks
 
 `build.py` places dummies for both boards in the case (PCB, pin headers, Dupont sockets on the
-outermost pins, radio module, USB-C socket, buttons) and computes the intersections with OpenSCAD.
-The build stops on any collision.
+outermost pins, radio module, USB-C socket, buttons) and computes intersections with OpenSCAD.
+The build stops when a check fails.
+
+- **collision**: must be 0 (touching faces do not count).
+- **retention**: the part is moved 0.3–0.5 mm against its snap. Only a barb, nub or latch that really
+  catches gives an overlap, so it must be > 0.2 mm³. With the barbs removed the checks give 0.
+- **blocked**: a USB-C plug pushed into a covered opening must hit the slider.
 
 | Check | Target | Result |
 |---|---|---|
 | Boards vs. body | 0 mm³ | 0.00 mm³ |
-| Boards vs. lid | 0 mm³ | 0.00 mm³ |
-| USB-C plug (12.4 × 6.5 mm) up to the socket | 0 mm³ | 0.00 mm³ |
+| Boards held by the latches (PCB lifted 0.3 mm) | > 0.2 | 3.36 mm³ |
+| Boards vs. lid (hold-downs only on bare PCB) | 0 mm³ | 0.00 mm³ |
+| Hold-downs press on the PCBs (0.2 mm) | > 0.5 | 3.42 mm³ |
 | Lid vs. body | 0 mm³ (faces touch) | 0.00 mm³ |
-| Quiver vs. body | 0 mm³ | 0.00 mm³ |
+| Fin, quiver, Saturn, hooks vs. body / vs. boards | 0 mm³ | 0.00 / 0.00 mm³ |
+| Fin / quiver / Saturn / hooks held by their barbs | > 0.2 | 0.45 / 0.45 / 0.45 / 1.31 mm³ |
+| Quiver (without its web) at least 1.5 mm from the wall | 0 mm³ | 0.00 mm³ |
 | Pen in the quiver | 0 mm³ | 0.00 mm³ |
-| Hold-downs touch the PCBs | > 0 | 4.50 mm³ (all four) |
+| Lid parts vs. lid / held by their nubs | 0 / > 0.2 | 0.00 / 2.51 mm³ |
+| Slider vs. body at RUN / at FLASH | 0 mm³ | 0.00 / 0.00 mm³ |
+| Slider held by its bumps (lifted 0.4 mm) | > 0.2 | 0.46 mm³ |
+| USB-C plug (12.4 × 6.5 mm) into the open socket, RUN / FLASH | 0 mm³ | 0.00 / 0.00 mm³ |
+| Plug shell (8.4 × 2.6 mm) into the covered socket, RUN / FLASH | > 0.5 | 34.94 / 34.94 mm³ |
+| Plug shell into either socket, slider half way | > 0.5 | 19.55 / 19.55 mm³ |
+
+On top of that, `build.py` counts the bodies of every printed part **layer by layer**, the way the
+printer builds them (see [Pitfalls](#pitfalls)).
 
 ⚠️ **Dummy assumptions, not measured:** pin headers centred along the PCB, ESP32 row spacing
-25.4 mm, module and button heights. If you measure your board, enter it at the top of `check.scad`.
+25.4 mm, module and button heights, and the bare PCB area under the hold-downs. If you measure your
+board, enter it at the top of `check.scad`.
 
 ## Pitfalls
 
@@ -150,6 +210,13 @@ The build stops on any collision.
   therefore aborts on every warning.
 - **Touching faces give loose bodies.** Hold-downs and latches that only touched the lid became
   separate solids. They now reach 0.1 mm into it, and `build.py` counts the solids per part.
+- **Touching along an edge counts as one solid — but prints as two.** On the first print
+  (2026-10-29) both light windows were plain holes: the 0.6 mm skin met the rest of the lid only along
+  its outline and came off as a loose plate. `trimesh` counted the lid as one solid. `build.py` now also
+  slices every part into 0.1 mm layers and links islands only where neighbouring layers overlap; on the
+  old lid that finds 3 bodies. The skin now reaches 1.2 mm under the full-thickness lid.
+- **0.3 mm next to a wall is not a gap.** The flared top of the quiver jammed against the side wall when
+  plugging it in. Everything except its web now stays 1.5 mm away, and a check enforces it.
 - **PNG export fails in the OpenSCAD Flatpak** (no offscreen GL context). `tools/render.py` uses a
   small software rasteriser instead.
 - **STL output is not byte-stable.** OpenSCAD may write the same triangles in a different order on
