@@ -11,6 +11,13 @@
 </p>
 
 <p align="center">
+  <a href="https://elektrogandhi.github.io/PlatinenLupe/"><img alt="Try the live demo" src="https://img.shields.io/badge/%E2%96%B6%20try%20the%20demo-in%20your%20browser-ff9e3d?style=for-the-badge"></a>
+  <a href="https://elektrogandhi.github.io/PlatinenLupe/flasher/"><img alt="Flash from the browser" src="https://img.shields.io/badge/%E2%9A%A1%20flash-from%20the%20browser-6fd6c4?style=for-the-badge"></a>
+  <a href="https://github.com/ElektroGandhi/PlatinenLupe/releases/latest"><img alt="Download" src="https://img.shields.io/github/v/release/ElektroGandhi/PlatinenLupe?style=for-the-badge&label=download&color=44382b"></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/ElektroGandhi/PlatinenLupe/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/ElektroGandhi/PlatinenLupe/ci.yml?branch=main&style=flat-square&label=CI"></a>
   <a href="LICENSE"><img alt="MIT" src="https://img.shields.io/badge/code-MIT-ff9e3d?style=flat-square"></a>
   <a href="enclosure/LICENSE"><img alt="CC BY-SA 4.0" src="https://img.shields.io/badge/case-CC%20BY--SA%204.0-6fd6c4?style=flat-square"></a>
   <img alt="no app" src="https://img.shields.io/badge/app-none-7fdc94?style=flat-square">
@@ -79,7 +86,7 @@ identify parts with a vision model you already run (LM Studio, Ollama). Details:
 `softish-XXXXXX`), an ESP32 DevKit, a NodeMCU (or a second ESP32), four Dupont wires.
 → [docs/hardware.md](docs/hardware.md)
 
-**2 · Flash** — with the [web flasher](flasher/) (Chrome/Edge, one click per board) or PlatformIO:
+**2 · Flash** — with the [web flasher](https://elektrogandhi.github.io/PlatinenLupe/flasher/) (Chrome/Edge, one click per board, nothing to install) or PlatformIO:
 
 ```bash
 cd firmware

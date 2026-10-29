@@ -1,0 +1,28 @@
+name: My loupe is different
+description: Another WiFi ear camera or endoscope — help make it work
+labels: [loupe support]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Many of these cameras share the same chip. [docs/protocol.md](../blob/main/docs/protocol.md) describes the one
+        that works today; [docs/reverse-engineering.md](../blob/main/docs/reverse-engineering.md) shows how it was found.
+  - type: input
+    id: name
+    attributes:
+      label: Product name and shop
+    validations: { required: true }
+  - type: input
+    id: app
+    attributes:
+      label: App it needs
+    validations: { required: true }
+  - type: input
+    id: ssid
+    attributes:
+      label: Its WiFi name pattern
+      placeholder: "softish-xxxxxx"
+  - type: textarea
+    id: notes
+    attributes:
+      label: What have you tried?

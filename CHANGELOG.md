@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 1.3.0 — 2026-10-30
+
+Faster, cleaner picture and the case as it was really printed.
 
 ### Firmware: no Bluetooth while streaming
 

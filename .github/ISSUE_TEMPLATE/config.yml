@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Try the demo first
+    url: https://elektrogandhi.github.io/PlatinenLupe/
+    about: The full page with a synthetic board — no hardware needed.

@@ -11,6 +11,13 @@
 </p>
 
 <p align="center">
+  <a href="https://elektrogandhi.github.io/PlatinenLupe/"><img alt="Demo ausprobieren" src="https://img.shields.io/badge/%E2%96%B6%20Demo-im%20Browser-ff9e3d?style=for-the-badge"></a>
+  <a href="https://elektrogandhi.github.io/PlatinenLupe/flasher/"><img alt="Im Browser flashen" src="https://img.shields.io/badge/%E2%9A%A1%20flashen-im%20Browser-6fd6c4?style=for-the-badge"></a>
+  <a href="https://github.com/ElektroGandhi/PlatinenLupe/releases/latest"><img alt="Herunterladen" src="https://img.shields.io/github/v/release/ElektroGandhi/PlatinenLupe?style=for-the-badge&label=download&color=44382b"></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/ElektroGandhi/PlatinenLupe/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/ElektroGandhi/PlatinenLupe/ci.yml?branch=main&style=flat-square&label=CI"></a>
   <a href="LICENSE"><img alt="MIT" src="https://img.shields.io/badge/Code-MIT-ff9e3d?style=flat-square"></a>
   <a href="enclosure/LICENSE"><img alt="CC BY-SA 4.0" src="https://img.shields.io/badge/Geh%C3%A4use-CC%20BY--SA%204.0-6fd6c4?style=flat-square"></a>
   <img alt="ohne App" src="https://img.shields.io/badge/App-keine-7fdc94?style=flat-square">
@@ -57,7 +64,7 @@ Seite zusätzlich Bauteile mit einem Bildmodell, das du ohnehin betreibst (LM St
 
 | | |
 |---|---|
-| **Livebild** | ~5 Bilder/s über einen NodeMCU (gemessen; die Kamera selbst liefert ~16), ohne Plug-in, ohne App |
+| **Livebild** | 4–10 Bilder/s über einen NodeMCU, je nach Motiv (gemessen; die Kamera selbst liefert ~16), ohne Plug-in, ohne App |
 | **Gerade halten** | der Lagesensor der Lupe hält das Bild aufrecht; die Ansicht wird ein rundes Bullauge, damit sich keine Ecken drehen |
 | **Lichtring** | 0–100 % von der Seite aus, bleibt auch nach einem Neustart der Lupe erhalten |
 | **Spiegeln · Standbild · Zoom 1×/2×/4× · Foto speichern** | was man an der Werkbank wirklich braucht |
@@ -77,7 +84,7 @@ Seite zusätzlich Bauteile mit einem Bildmodell, das du ohnehin betreibst (LM St
 **1 · Teile besorgen** – die Lupe (eine WLAN-Ohrkamera für die App *EarVision*; ihr WLAN heißt `softish-XXXXXX`),
 ein ESP32-DevKit, ein NodeMCU (oder ein zweiter ESP32), vier Dupont-Kabel. → [docs/hardware.md](docs/hardware.md)
 
-**2 · Flashen** – mit dem [Browser-Flasher](flasher/) (Chrome/Edge, ein Klick je Board) oder mit PlatformIO:
+**2 · Flashen** – mit dem [Browser-Flasher](https://elektrogandhi.github.io/PlatinenLupe/flasher/) (Chrome/Edge, ein Klick je Board, nichts zu installieren) oder mit PlatformIO:
 
 ```bash
 cd firmware
