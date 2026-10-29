@@ -162,6 +162,7 @@ das aktuelle Modell behebt beides.</sub></p>
 | Seite auf Handy und Desktop, Deutsch und Englisch, Gerät / Demo | ✅ Headless-Browser |
 | Hotspot-Modus am echten NodeMCU: WPA2-Hotspot, Captive-Portal-Umleitung, Seite 15/15 vollständig, Einstellungen, WLAN-Suche, Verbindung zum ESP32 | ✅ gemessen |
 | Ganze Kette an echter Hardware im Hotspot-Modus: Lupe → ESP32 → NodeMCU → Browser, 4,8 B/s, 0 Aussetzer in 30 s; Neustarts der Lupe werden überbrückt | ✅ gemessen |
+| Ohne Bluetooth beim Streamen (Lupenseite startet nach dem Wecken neu): 10 min, ~20 KB große Bilder, −63 dBm: 5,9 B/s, 0,2 % unvollständige Bilder (1.2.0 direkt davor: 3,9 B/s, 39 %), kein Neustart | ✅ gemessen |
 | Schwacher Funk (Lupe bei −75 dBm): 3,4 B/s gleichmäßig über 3 min, 0 Kabelfehler (1.1, 1 Mbaud) | ✅ gemessen |
 | 1.2: 2 Mbaud, NodeMCU mit 160 MHz, Bilder werden schon während des Empfangs weitergereicht – 10 min mit 21–33 KB großen Bildern: 3,7 B/s, kein Neustart, kleinster freier Speicher 5,8 KB, 3,5 % der Abrufe wiederholt; kleine Bilder 7–10 B/s | ✅ gemessen |
 | Heimnetz-Modus an der Hardware; Einstellungen überstehen das Firmware-Update | ✅ gemessen |

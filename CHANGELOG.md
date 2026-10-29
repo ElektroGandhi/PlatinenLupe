@@ -1,8 +1,27 @@
 # Changelog
 
-## Unreleased — case 2
+## Unreleased
 
-After the first real print (2026-10-29). Case only, no firmware change.
+### Firmware: no Bluetooth while streaming
+
+Bluetooth forces WiFi modem sleep on the ESP32; with it on, many frames arrived incomplete. After waking the
+loupe, the loupe side now stores the loupe's WiFi in RTC memory, restarts without Bluetooth and keeps WiFi awake.
+A lost connection restarts it with Bluetooth; a crash or power cycle always starts with Bluetooth; after three
+failed joins without it the old way stays. `/api/state` → `link.a.bluetooth` shows which way it runs.
+
+Measured 2026-10-29 on the real boards, loupe at −63 dBm, ~20 KB frames, same setup back to back:
+
+| | 1.2.0 (60 s) | without Bluetooth (10 min) |
+|---|---|---|
+| frames/s in the browser | 3.9 | **5.9** |
+| incomplete frames at the ESP32 | 39 % | **0.2 %** |
+| failed fetches | 5 | 1 |
+
+No restart, smallest free heap 5.8 KB. Only the ESP32 (loupe side) needs flashing.
+
+### Case 2
+
+After the first real print (2026-10-29).
 
 - **No glue any more.** Every part clicks in: snap prongs for fin, quiver, Saturn and hooks; clip tongues
   for ring, stripes, badge and light frames; each tongue checked to ≤ 2 % bending strain.
@@ -17,7 +36,7 @@ After the first real print (2026-10-29). Case only, no firmware change.
 - `build.py`: counts bodies layer by layer as the printer sees them (catches edge-only contact), plus
   retention, clearance and "plug blocked" checks — 24 in total.
 
-## 1.2.0 — 2026-10-30
+## 1.2.0 — 2026-10-29
 
 Faster picture, measured on the real boards.
 

@@ -163,6 +163,7 @@ the current model fixes both.</sub></p>
 | Page on phone and desktop, English and German, device / demo | ✅ headless browser |
 | Hotspot mode on a real NodeMCU: WPA2 hotspot, captive-portal redirect, page 15/15 complete, settings, WiFi scan, link to the ESP32 | ✅ measured |
 | Whole chain on real hardware in hotspot mode: loupe → ESP32 → NodeMCU → browser, 4.8 fps, 0 misses in 30 s; loupe restarts are recovered | ✅ measured |
+| No Bluetooth while streaming (loupe side restarts after waking the loupe): 10 min, ~20 KB frames, −63 dBm: 5.9 fps, 0.2 % incomplete frames (1.2.0 back to back: 3.9 fps, 39 %), no restart | ✅ measured |
 | Weak signal (loupe at −75 dBm): 3.4 fps steady for 3 min, 0 link errors (1.1, 1 Mbaud) | ✅ measured |
 | 1.2: 2 Mbaud, NodeMCU at 160 MHz, frames streamed while they arrive — 10 min with 21–33 KB frames: 3.7 fps, no restart, smallest free heap 5.8 KB, 3.5 % of fetches retried; small frames 7–10 fps | ✅ measured |
 | Home-network mode on hardware; settings kept across the firmware update | ✅ measured |

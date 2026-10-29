@@ -136,10 +136,16 @@ layout. Two 64 KB buffers left too little RAM for WiFi and Bluetooth (boot loop,
 The loupe side reports why it last restarted (`reset` in `/api/state` → `link.a`: `power_on`, `brownout`, `crash`, …).
 If the loupe is already awake, it skips Bluetooth and joins the WiFi found by a scan (password = BSSID).
 
-WiFi modem sleep stays **on**. With Bluetooth enabled, switching it off aborts in `wifi_set_ps_process` ("Should
+With Bluetooth enabled, WiFi modem sleep must stay **on**: switching it off aborts in `wifi_set_ps_process` ("Should
 enable WiFi modem sleep when both WiFi and Bluetooth are enabled"), and starting Bluetooth while it is off aborts in
-`coex_enable` — both were reboot loops while waking the loupe. With modem sleep on: 4.8 frames/s, no loss.
-Bluetooth is therefore initialised in `setup()`, before WiFi.
+`coex_enable` — both were reboot loops while waking the loupe. Bluetooth is therefore initialised in `setup()`,
+before WiFi.
+
+Modem sleep costs frames: 39 % arrived incomplete at the ESP32 (1.2.0, −63 dBm). So Bluetooth is only used to wake
+the loupe. Then the board stores the loupe's SSID and password in RTC memory, restarts and never starts Bluetooth;
+WiFi stays awake (`setSleep(false)`). Measured over 10 minutes: 0.2 % incomplete, 5.9 frames/s in the browser.
+A lost connection restarts with Bluetooth; a crash or power cycle always starts with Bluetooth; after three failed
+joins without it the old way stays. `link.a.bluetooth` in `/api/state` shows the current way.
 
 A loupe that restarts no longer knows the ESP32, but its beacons keep coming, so the station still looks connected.
 The loupe side treats RSSI 0 three times in a row, or 6 s without an answer while the home side sends commands, as
