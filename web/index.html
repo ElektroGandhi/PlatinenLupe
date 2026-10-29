@@ -688,12 +688,14 @@ function startDevice(first) {
   }, 1000);
   (async () => {   // always fetch the next complete frame — slows itself down when the board is busy
     for (;;) {
+      let answered = false;
       try {
         const r = await fetch("api/frame.jpg", {cache: "no-store"});
+        answered = true;
         if (r.status !== 200) { await sleep(400); continue; }
         const a = parseFloat(r.headers.get("X-Angle") || "0");
         newFrame(await createImageBitmap(await r.blob()), a);
-      } catch (e) { await sleep(1000); }
+      } catch (e) { await sleep(answered ? 100 : 1000); }   // a frame cut off on the cable: just ask again
     }
   })();
 }

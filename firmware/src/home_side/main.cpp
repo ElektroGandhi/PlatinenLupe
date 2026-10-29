@@ -138,9 +138,18 @@ static void toLoupe(uint8_t type, const uint8_t* d, size_t n) {
 // ---- One frame buffer ------------------------------------------------------------------------
 // The next frame is only collected once the previous one was fetched. The browser's fetch rate thus
 // paces the frame rate, and no second buffer is needed (the ESP8266 has too little RAM for two).
-static const size_t FRAME_MAX = 24 * 1024;           // measured: 6–21 KB per frame
+// When the loupe side announces the length (frame::LEN_MAGIC), the frame goes to the browser while it is
+// still arriving: cable and WiFi then work at the same time instead of one after the other. Bytes already
+// sent are dropped from the front of the buffer, so such a frame may be larger than the buffer.
+// Measured: 5–33 KB per frame, depending on the subject. Larger frames stream through, so 20 KB is enough —
+// and the 1460-byte lwIP needs the RAM: with 24 KB the free heap fell to 1.9 KB and the board hung.
+static const size_t FRAME_MAX = 20 * 1024;
 static uint8_t* img = nullptr;                       // allocated after WiFi is up (see setup)
-static size_t imgCapacity = 0, imgLen = 0;
+static size_t imgCapacity = 0, imgLen = 0, imgExpect = 0;   // imgExpect: announced length, 0 = unknown
+static size_t imgSent = 0, imgGone = 0;              // sent from the buffer / dropped from its front
+static bool imgStreaming = false;                    // a browser is receiving this frame right now
+static bool browserWaiting = false;                  // a frame request is open (waiting or receiving)
+static size_t lastSize = 0;                          // length of the last frame served
 enum ImgState { EMPTY, FILLING, READY };
 static ImgState imgState = EMPTY;
 static int imgNo = -1, imgTotal = 0, imgNext = 0;
@@ -158,40 +167,65 @@ static void frameChunk(const uint8_t* d, size_t n) {
   if (n < 24 || !viewerActive() || imgState == READY) return;
   int no = d[0], seq = d[1], total = d[2];
   if (seq == 0) {
-    imgState = FILLING; imgLen = 0; imgNo = no; imgTotal = total; imgNext = 0;
+    if (imgStreaming) { imgState = EMPTY; return; }  // a new frame in the middle of a stream: give up
+    imgState = FILLING; imgLen = 0; imgNo = no; imgTotal = total; imgNext = 0; imgExpect = 0;
+    imgSent = imgGone = 0;
     memcpy(&imgAngle, d + 3, 4);
+    if (!memcmp(d + frame::LEN_AT, frame::LEN_MAGIC, 4)) {
+      uint32_t len;
+      memcpy(&len, d + frame::LEN_AT + 4, 4);
+      imgExpect = len;
+      // Asked for ahead and too big to wait in the buffer: drop it now, and stop asking ahead (grantFrames)
+      // until frames get smaller. With a browser waiting, it streams through whatever its size.
+      if (!browserWaiting && len + 2048 > imgCapacity) { imgState = EMPTY; lastSize = len; return; }
+    }
   }
   if (imgState != FILLING || no != imgNo || seq != imgNext) { imgState = EMPTY; return; }
   size_t part = n - 24;
+  if (img && imgLen + part > imgCapacity && imgSent) {   // make room: drop what the browser already has
+    memmove(img, img + imgSent, imgLen - imgSent);
+    imgLen -= imgSent; imgGone += imgSent; imgSent = 0;
+  }
   if (!img || imgLen + part > imgCapacity) { imgState = EMPTY; tooBig++; return; }
   memcpy(img + imgLen, d + 24, part);
   imgLen += part; imgNext++;
   if (imgNext == imgTotal) { imgState = READY; lastFrame = millis(); }
 }
 
+// A frame can go out once it is complete, or as soon as its length is known.
+static bool servable() { return imgState == READY || (imgState == FILLING && imgExpect); }
+
 static void readLink(uint32_t waitMs = 0) {
   uint32_t t = millis();
 #if defined(ESP8266)
   if (LINK.hasOverrun()) overruns++;
 #endif
+  static uint8_t rx[256];
   do {
-    int n = 0;
-    while (LINK.available() && n++ < 4096) {
-      if (!reader.feed(LINK.read())) continue;
-      if (reader.type == frame::VIDEO) {
-        frameChunk(reader.data, reader.len);
-      } else if (reader.type == frame::CONTROL) {
-        int a = -1;
-        for (int i = 0; i < reader.len; i++) if (reader.data[i] == '{') { a = i; break; }
-        if (a >= 0) { telemetry = ""; telemetry.concat((const char*)reader.data + a, reader.len - a); }
-      } else if (reader.type == frame::STATUS) {
-        sideA = "";
-        sideA.concat((const char*)reader.data, reader.len);   // payload is not NUL-terminated
-        lastSideA = millis();
+    // In blocks, at most ~2 KB per call: byte by byte, the reader kept the CPU from the WiFi stack at 2 Mbaud.
+    for (size_t budget = 2048; budget;) {
+      int a = LINK.available();
+      if (a <= 0) break;
+      size_t k = LINK.read(rx, (size_t)a < sizeof rx ? (size_t)a : sizeof rx);
+      if (!k) break;
+      budget -= k < budget ? k : budget;
+      for (size_t pos = 0, used; pos < k; pos += used) {
+        if (!reader.feed(rx + pos, k - pos, used)) continue;
+        if (reader.type == frame::VIDEO) {
+          frameChunk(reader.data, reader.len);
+        } else if (reader.type == frame::CONTROL) {
+          int b = -1;
+          for (int i = 0; i < reader.len; i++) if (reader.data[i] == '{') { b = i; break; }
+          if (b >= 0) { telemetry = ""; telemetry.concat((const char*)reader.data + b, reader.len - b); }
+        } else if (reader.type == frame::STATUS) {
+          sideA = "";
+          sideA.concat((const char*)reader.data, reader.len);   // payload is not NUL-terminated
+          lastSideA = millis();
+        }
       }
     }
-    if (waitMs && imgState != READY) yield();
-  } while (waitMs && imgState != READY && millis() - t < waitMs);
+    if (waitMs && !servable()) yield();
+  } while (waitMs && !servable() && millis() - t < waitMs);
 }
 
 // ---- Web API -------------------------------------------------------------------------------
@@ -239,6 +273,28 @@ static void sendPage() {
   writeAll(PAGE_GZ, PAGE_GZ_LEN);
 }
 
+// Why the board last restarted, same words as the loupe side ("crash" and "watchdog" must never show up).
+static const char* resetReason() {
+#if defined(ESP8266)
+  switch (ESP.getResetInfoPtr()->reason) {
+    case REASON_DEFAULT_RST: case REASON_EXT_SYS_RST: return "power_on";
+    case REASON_EXCEPTION_RST: return "crash";
+    case REASON_WDT_RST: case REASON_SOFT_WDT_RST: return "watchdog";
+    case REASON_SOFT_RESTART: return "software";
+    default: return "other";
+  }
+#else
+  switch (esp_reset_reason()) {
+    case ESP_RST_POWERON: return "power_on";
+    case ESP_RST_BROWNOUT: return "brownout";
+    case ESP_RST_PANIC: return "crash";
+    case ESP_RST_INT_WDT: case ESP_RST_TASK_WDT: case ESP_RST_WDT: return "watchdog";
+    case ESP_RST_SW: return "software";
+    default: return "other";
+  }
+#endif
+}
+
 // stage: live | wait | error; code tells the page which sentence to show (the page is bilingual).
 static void sendState() {
   lastViewer = millis();
@@ -271,27 +327,54 @@ static void sendState() {
   j += ",\"link\":{\"a\":" + (aFresh ? sideA : String("null"));
   j += ",\"b\":{\"rssi\":" + String(staOn ? WiFi.RSSI() : 0) + ",\"crc\":" + reader.crc_errors +
        ",\"heap\":" + ESP.getFreeHeap() + ",\"served\":" + framesServed + ",\"too_big\":" + tooBig +
-       ",\"buffer\":" + imgCapacity + ",\"link_full\":" + linkFull + ",\"overruns\":" + overruns + "}}}";
+       ",\"buffer\":" + imgCapacity + ",\"link_full\":" + linkFull + ",\"overruns\":" + overruns +
+       ",\"uptime\":" + millis() / 1000 + ",\"reset\":\"" + resetReason() + "\"}}}";
   web.sendHeader("Cache-Control", "no-store");
   web.send(200, "application/json", j);
 }
 
-static void grantFrames();
+static void grantFrames(bool asked = false);
 static uint32_t lastGrant = 0;
 
 static void sendFrame() {
   lastViewer = millis();
-  grantFrames();
-  readLink(800);                                    // wait for the next complete frame
-  if (imgState != READY) { web.send(503, "text/plain", "no frame"); return; }
+  browserWaiting = true;
+  grantFrames(true);
+  readLink(800);                                    // wait for the next frame (complete, or its length known)
+  if (!servable()) { browserWaiting = false; web.send(503, "text/plain", "no frame"); return; }
+  size_t total = imgState == READY ? imgLen : imgExpect;
   web.sendHeader("Cache-Control", "no-store");
   web.sendHeader("X-Angle", String(imgAngle, 1));
   web.sendHeader("Access-Control-Expose-Headers", "X-Angle");
-  web.setContentLength(imgLen);
+  web.setContentLength(total);
   web.send(200, "image/jpeg", "");
-  if (writeAll(img, imgLen)) framesServed++;
+  // Send what has arrived, keep reading the cable in between. Only as much as the TCP buffer takes, so the
+  // UART is never left alone for long (its RX buffer holds ~40 ms at 2 Mbaud).
+  WiFiClient c = web.client();
+  c.setNoDelay(true);   // small pieces: without this Nagle waits for the browser's delayed ACK (measured 80 KB/s)
+  imgStreaming = true;
+  for (uint32_t t = millis(); imgGone + imgSent < total && c.connected() && millis() - t < 3000;) {
+    readLink();
+    if (imgState == EMPTY || (imgState == READY && imgGone + imgLen != total)) break;   // broken on the cable
+    size_t n = imgLen - imgSent;
+    // Full TCP segments only, except the last piece: many small segments fill the ESP8266's short send queue,
+    // and the receiver acknowledges a lone small segment only after its delayed-ACK timer (measured: ~1 KB / 40 ms).
+    if (n < 1460 && imgGone + imgLen < total) n = 0;
+#if defined(ESP8266)
+    size_t room = c.availableForWrite();
+    if (n > room) n = room;
+#endif
+    if (n > 1460) n = 1460;
+    size_t w = n ? c.write(img + imgSent, n) : 0;
+    if (w) { imgSent += w; t = millis(); }
+    yield();                                        // lets the WiFi stack take in ACKs and send
+  }
+  imgStreaming = browserWaiting = false;
+  if (imgGone + imgSent == total) framesServed++;
+  else c.stop();                                    // the browser sees a short image and asks again
   imgState = EMPTY;                                 // only now collect the next frame
   lastGrant = 0;                                    // and ask for it right away
+  lastSize = total;
 }
 
 static void setLight() {
@@ -372,10 +455,12 @@ static void notFound() {
 }
 
 // ---- Flow control: ask the loupe side for one whole frame when the buffer is empty ----------
-// (again after 400 ms if it got lost on the way)
-static void grantFrames() {
+// (again after 400 ms if it got lost on the way). Asking ahead, before the browser does, only pays off
+// while frames fit the buffer: a large frame arriving with nobody to pass it on to overflows it.
+static void grantFrames(bool asked) {
   uint32_t now = millis();
-  if (!viewerActive() || imgState != EMPTY || now - lastGrant < 400) return;
+  if (!viewerActive() || imgState != EMPTY) return;
+  if (!asked && (now - lastGrant < 400 || lastSize + 2048 > imgCapacity)) return;
   uint8_t n = 1;
   toLoupe(frame::READY, &n, 1);
   lastGrant = now;

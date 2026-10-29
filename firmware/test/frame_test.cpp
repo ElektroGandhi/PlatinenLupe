@@ -50,6 +50,35 @@ int main() {
   ok = false;
   for (size_t i = 0; i < n; i++) ok |= r.feed(buf[i]);
   assert(ok && r.type == frame::READY && r.len == 1 && r.data[0] == 1);
+  // crc16() with its table must equal the plain bitwise CRC-16/CCITT (any start value, any length).
+  auto bitwise = [](const uint8_t* d, size_t len, uint16_t crc) {
+    for (size_t i = 0; i < len; i++) {
+      crc ^= (uint16_t)d[i] << 8;
+      for (int b = 0; b < 8; b++) crc = (crc & 0x8000) ? (crc << 1) ^ 0x1021 : crc << 1;
+    }
+    return crc;
+  };
+  for (int len : {0, 1, 3, 9, 700, 1400}) assert(frame::crc16(data, len) == bitwise(data, len, 0xFFFF));
+  assert(frame::crc16(data, 50, 0x1D0F) == bitwise(data, 50, 0x1D0F));
+  assert(frame::crc16((const uint8_t*)"123456789", 9) == 0x29B1);   // published check value of CRC-16/CCITT-FALSE
+
+  // Block feed: the same stream, cut into blocks of every size, gives the same frames as byte by byte.
+  for (size_t block : {1, 7, 64, 256, 1500, 5000}) {
+    frame::Reader rb;
+    int frames = 0;
+    for (size_t off = 0; off < stream.size(); off += block) {
+      size_t k = stream.size() - off < block ? stream.size() - off : block, pos = 0, used;
+      while (pos < k) {
+        if (rb.feed(stream.data() + off + pos, k - pos, used)) {
+          if (frames == 0) assert(rb.type == frame::VIDEO && rb.len == 1400 && !memcmp(rb.data, data, 1400));
+          if (frames == 1) assert(rb.type == frame::STATUS && rb.len == 2);
+          frames++;
+        }
+        pos += used;
+      }
+    }
+    assert(frames == 2 && rb.crc_errors == 0);
+  }
   printf("frame: all cases passed (good=%u, crc_errors=%u, too_long=%u)\n", r.good, r.crc_errors, r.too_long);
   return 0;
 }

@@ -96,6 +96,11 @@ static void onVideo(AsyncUDPPacket& p) {
   frameMask |= (uint64_t)1 << seq; frameHave++;
   if (frameHave < frameTotal) return;
   if (credits <= 0) { framesSkipped++; frameReset(); return; }   // nobody asked for it
+  uint32_t jpeg = 0;
+  for (int i = 0; i < frameTotal; i++) jpeg += chunkLen[i] - 24;
+  uint8_t* head = slots + 5;                        // loupe header of chunk 0, cable copy only
+  memcpy(head + frame::LEN_AT, frame::LEN_MAGIC, 4);
+  memcpy(head + frame::LEN_AT + 4, &jpeg, 4);
   for (int i = 0; i < frameTotal; i++) frame::seal(frame::VIDEO, chunkLen[i], slots + i * SLOT);
   outIndex = 0;
   credits--;
