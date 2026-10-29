@@ -9,7 +9,7 @@
 | NodeMCU v3 (ESP8266) **or** a second ESP32 | Home side. |
 | 4 Dupont wires (female–female) | TX, RX, GND, 5 V |
 | USB power supply + cable | One is enough for both boards. |
-| Optional: 3D-printed case | [enclosure/](../enclosure/) — beige + a little brown PLA, ~80 g, no supports |
+| Optional: 3D-printed case | [enclosure/](../enclosure/) — beige + a little red PLA (badge lettering brown and black), ~88 g, no supports |
 
 ## Wiring
 

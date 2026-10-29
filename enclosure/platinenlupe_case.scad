@@ -1,13 +1,14 @@
 // Platinenlupe -- "atomic age capsule" for the IKEA Skadis pegboard
 // 1950s retro-futurism: capsule shape, porthole with atom emblem, speed stripes, indicator lights,
-// tail fin, Saturn antenna. Base colour beige, accents brown (own print plate, no colour change).
+// tail fin, Saturn antenna. Base colour beige, accents red (own print plate, no colour change).
 //
 // Inside: board A (ESP32 DevKit V1, 30 pins) and board B (NodeMCU v3 LoLin, ESP8266), pin headers
 // facing the back wall, room for Dupont sockets underneath. USB-C plugs come in from the bottom.
 //
 // Parts (-D 'part="..."'):
 //   Beige:  body (back wall on the bed) . lid (face side on the bed) . hooks (2x, flat)
-//   Brown:  ring (porthole) . stripe (speed stripes) . badge (+ badge_text in beige) . light_frames (2 frames)
+//   Red:    ring (porthole) . stripe (speed stripes) . badge (+ badge_platinen brown, badge_lupe black)
+//           . light_frames (2 frames)
 //           . fin (right side) . saturn . quiver (holder for the loupe pen, left side, printed upright)
 //           . slider (USB selector at the bottom, flat)
 //   all     assembled preview
@@ -56,8 +57,8 @@ chamfer  = 2.0;              // chamfer around the lid (1950s TV set)
 lip_h    = 3.0;
 lip_w    = 1.6;
 fit      = 0.2;
-recess   = 1.2;              // depth of the recesses for the brown parts
-inlay_t  = 2.0;              // thickness of the brown inlays -> 0.8 mm proud
+recess   = 1.2;              // depth of the recesses for the red parts
+inlay_t  = 2.0;              // thickness of the red inlays -> 0.8 mm proud
 
 // ---- Snap fits ------------------------------------------------------------------------------
 // Nothing is glued. Every spring tongue is checked against PLA's bending strain:
@@ -141,7 +142,7 @@ porthole_r = [15, 19];              // ring inner / outer
 // The band covers 3-13 mm from the USB end and almost the full PCB width.
 band_y    = [wall + usb_margin + 3, wall + usb_margin + 13];
 band_w    = [22, 20];                // window width NodeMCU, ESP32
-band_frame = 3.0;                    // brown frame around the window (wide enough for a clip tongue)
+band_frame = 3.0;                    // red frame around the window (wide enough for a clip tongue)
 skin_overlap = 1.2;                  // the 0.6 mm light skin reaches this far under the full-thickness lid
 badge_c   = [outer_w/2, outer_h - 9.0];
 badge_size = [62, 9.5];
@@ -160,7 +161,7 @@ saturn_t  = 3.0;
 pen_d     = 13.1;            // loupe pen, measured 2026-10-27
 pen_l     = 142.7;
 quiver_gap = 1.0;            // diametral clearance: drops in easily, does not rattle much
-quiver_wall = 1.6;           // tube wall (thin: saves brown filament)
+quiver_wall = 1.6;           // tube wall (thin: saves red filament)
 cap_l     = 50.0;            // pen cap, measured -- only the cap sits in the quiver
 quiver_y  = [-15, 40];       // 55 mm: floor + cap + rim. The pen sticks out ~90 mm at the top
 floor_t   = 2.0;
@@ -393,7 +394,7 @@ module lid(with_hold_downs = true) {
             for (x = [wall + fit - 0.5, outer_w - wall - fit - 0.1]) translate([x, outer_h/2 - 7, -2.0]) cube([0.6, 14, 0.8]);
             if (with_hold_downs) hold_downs();
         }
-        // recesses for the brown parts, with a groove under the edge for every clip nub
+        // recesses for the red parts, with a groove under the edge for every clip nub
         translate([0, 0, lid_t - recess]) linear_extrude(recess + 1) {
             ring_2d(inlay_gap);
             offset(r = inlay_gap) stripe_2d();
@@ -415,7 +416,7 @@ module lid(with_hold_downs = true) {
     }
 }
 
-// ---- Brown parts, print-ready (lying flat) --------------------------------------------------
+// ---- Red parts, print-ready (lying flat) --------------------------------------------------
 module porthole_ring() {   // ring with chamfers, centred on the origin; three clip tongues on the outer edge
     difference() {
         hull() { cylinder(r = porthole_r[1], h = 0.01); translate([0, 0, inlay_t - 0.01]) cylinder(r = porthole_r[1] - 0.6, h = 0.01); }
@@ -431,8 +432,8 @@ module stripe_part() {
     }
     for (c = stripe_nubs()) place(c) nub(stripe_d);
 }
-// Two-colour badge: brown plate, beige lettering inlaid 0.6 mm deep (centred on the origin, face side up).
-// It is printed face side down: the colour change happens only in the first 0.6 mm.
+// Three-colour badge: red plate, "PLATINEN" brown and "LUPE" black inlaid 0.6 mm deep (centred on the origin,
+// face side up). It is printed face side down: the colours change only in the first 0.6 mm.
 module badge_part() {
     difference() {
         linear_extrude(inlay_t) badge_2d();
@@ -441,7 +442,14 @@ module badge_part() {
     }
     for (c = badge_clips()) place(c) translate([0.3, 0]) nub();
 }
-module badge_text() { translate([0, 0, inlay_t - 0.6]) linear_extrude(0.6) lettering_name(); }
+// The two words split at x = 9 mm: the second N of PLATINEN ends at 8.39 mm, the L of LUPE starts at 9.65 mm.
+badge_split = 9.0;
+module badge_word(right) {
+    translate([0, 0, inlay_t - 0.6]) linear_extrude(0.6) intersection() {
+        lettering_name();
+        translate([right ? badge_split : -100, -50]) square([100 + (right ? 0 : badge_split), 100]);
+    }
+}
 module light_frame(i) {   // frame around the light band of board i, in lid coordinates
     difference() {
         hull() {
@@ -571,14 +579,15 @@ module inlays() {
 }
 
 // =============================================================================================
-beige = "#e8d9b5"; brown = "#6b4a2e";
+beige = "#e8d9b5"; red = "#a3121a"; brown = "#5e3f27"; black = "#141414";
 if (part == "body")  body();
 if (part == "lid")   translate([0, outer_h, lid_t]) rotate([180, 0, 0]) lid();
 if (part == "hooks") for (i = [0, 1]) translate([i*16, 0, 0]) hook();
 if (part == "ring")  porthole_ring();
 if (part == "stripe") stripe_part();
 if (part == "badge") rotate([180, 0, 0]) translate([0, 0, -inlay_t]) badge_part();       // face side down
-if (part == "badge_text") rotate([180, 0, 0]) translate([0, 0, -inlay_t]) badge_text();
+if (part == "badge_platinen") rotate([180, 0, 0]) translate([0, 0, -inlay_t]) badge_word(false);
+if (part == "badge_lupe")     rotate([180, 0, 0]) translate([0, 0, -inlay_t]) badge_word(true);
 if (part == "light_frames") for (i = [0, 1]) translate([-wall - [x_node, x_esp][i] + i*36, -band_y[0], 0]) light_frame(i);
 if (part == "fin")   fin_part();                         // right side only -- the quiver sits on the left
 if (part == "quiver") translate([0, 0, -quiver_y[0]]) rotate([90, 0, 0]) quiver();   // upright: floor on the bed
@@ -589,18 +598,20 @@ module assembled_beige() {
     translate([0, 0, body_t]) lid();
     hooks_mounted();
 }
-module assembled_brown() {
+module assembled_red() {
     translate([0, 0, body_t]) inlays();
     quiver();                                                                      // left: quiver for the loupe pen
     fin_mounted();                                                                 // right
     saturn_mounted();
     slider(0);                                                                     // bottom: USB selector at RUN
 }
-module assembled_text() {
-    translate([badge_c[0], badge_c[1], body_t + lid_t - recess]) badge_text();
+module assembled_word(right) {
+    translate([badge_c[0], badge_c[1], body_t + lid_t - recess]) badge_word(right);
 }
-if (part == "all") { color(beige) assembled_beige(); color(brown) assembled_brown(); color(beige) assembled_text(); }
+if (part == "all") { color(beige) assembled_beige(); color(red) assembled_red();
+                     color(brown) assembled_word(false); color(black) assembled_word(true); }
 if (part == "assembled_beige") assembled_beige();
-if (part == "assembled_brown") assembled_brown();
-if (part == "assembled_text") assembled_text();
+if (part == "assembled_red") assembled_red();
+if (part == "assembled_platinen") assembled_word(false);
+if (part == "assembled_lupe") assembled_word(true);
 if (part == "assembled_pen") pen_dummy();

@@ -6,7 +6,7 @@ GL context ("Assertion 'get() != pointer()' failed", empty PNG).
 
   python tools/render.py --work ~/.cache/platinenlupe-enclosure --out ../docs/images
 
-Writes case_front.png (assembled, front, slight angle) and case_parts.png (the three print plates).
+Writes case_parts.png (the three print plates). The assembled view, case_front.jpg, comes from render_blender.py.
 Needs numpy, trimesh, Pillow.
 """
 from __future__ import annotations
@@ -23,8 +23,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from bambu_3mf import Project  # noqa: E402
 
 BEIGE = "#E8D9B5"
-BROWN = "#6B4A2E"
-GREY = "#8A8D91"
+RED = "#A3121A"
+BROWN = "#5E3F27"
+BLACK = "#141414"
 PLATE = "#D9DADC"
 BACKGROUND = (247, 245, 240)
 
@@ -104,25 +105,19 @@ def load(work: Path, name: str) -> trimesh.Trimesh:
     return trimesh.load(work / f"{name}.stl", force="mesh")
 
 
-def case_front(work: Path) -> Image.Image:
-    meshes = [(load(work, "assembled_beige"), BEIGE), (load(work, "assembled_brown"), BROWN),
-              (load(work, "assembled_text"), BEIGE), (load(work, "assembled_pen"), GREY)]
-    return render(meshes, view_matrix(-22, 14), (1600, 1200))
-
-
 def case_parts(work: Path) -> Image.Image:
     plates = [[("body", BEIGE), ("lid", BEIGE), ("hooks", BEIGE)],
-              [("ring", BROWN), ("stripe", BROWN), ("light_frames", BROWN), ("fin", BROWN),
-               ("quiver", BROWN), ("saturn", BROWN), ("slider", BROWN)],
-              [(("badge", "badge_text"), None)]]
+              [("ring", RED), ("stripe", RED), ("light_frames", RED), ("fin", RED),
+               ("quiver", RED), ("saturn", RED), ("slider", RED)],
+              [(("badge", "badge_platinen", "badge_lupe"), None)]]
     # Parts as build.py places them on each plate (same packing as the 3MF), plates stacked front to back.
     # Each plate is drawn only as large as its parts plus a margin, otherwise the picture is mostly empty bed.
     scene, margin, gap, y_top = [], 8.0, 14.0, 0.0
     for objects in plates:
         loaded = []
         for names, colour in objects:
-            if isinstance(names, tuple):   # two-colour badge: brown plate, beige lettering
-                group = [(load(work, names[0]), BROWN), (load(work, names[1]), BEIGE)]
+            if isinstance(names, tuple):   # three-colour badge: red plate, PLATINEN brown, LUPE black
+                group = [(load(work, n), c) for n, c in zip(names, (RED, BROWN, BLACK))]
             else:
                 group = [(load(work, names), colour)]
             lo = np.min([m.bounds[0] for m, _ in group], axis=0)
@@ -162,7 +157,6 @@ def main() -> None:
     ap.add_argument("--out", default=str(Path(__file__).resolve().parents[2] / "docs/images"))
     a = ap.parse_args()
     work, out = Path(a.work).expanduser(), Path(a.out).expanduser()
-    save(case_front(work), out / "case_front.png")
     save(case_parts(work), out / "case_parts.png")
 
 

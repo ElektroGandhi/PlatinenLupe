@@ -137,10 +137,10 @@ More: [docs/identification.md](docs/identification.md).
 
 ## The case
 
-<p align="center"><img src="docs/images/case_front.png" alt="Atomic-age capsule case with porthole, fin and a quiver for the loupe" width="70%"></p>
+<p align="center"><img src="docs/images/case_front.jpg" alt="Atomic-age capsule case with porthole, fin and a quiver for the loupe" width="70%"></p>
 
 A 1950s "atomic age capsule" for an IKEA Skådis pegboard: porthole with an atom, speed stripes, a tail fin, a little
-Saturn — and a quiver that holds the loupe. Beige with brown accents, ~88 g of PLA, no supports, no glue:
+Saturn — and a quiver that holds the loupe. Beige with red accents, ~88 g of PLA, no supports, no glue:
 every part clicks in. A slider under the bottom opens only one USB socket at a time.
 OpenSCAD source, STL and a ready 3MF: [enclosure/](enclosure/).
 

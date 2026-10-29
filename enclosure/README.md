@@ -1,6 +1,6 @@
 # Enclosure: the "atomic age capsule"
 
-![Assembled case, front view](../docs/images/case_front.png)
+![Assembled case on a Skådis pegboard (Blender render)](../docs/images/case_front.jpg)
 
 A 3D-printable case in 1950s retro-futurist style: porthole with an atom emblem, speed stripes,
 tail fin, Saturn antenna and a silo-shaped quiver. It holds both boards of the Platinenlupe:
@@ -9,8 +9,9 @@ tail fin, Saturn antenna and a silo-shaped quiver. It holds both boards of the P
 - **board B**: NodeMCU v3 LoLin (ESP8266), left side, marked "B"
 
 The quiver on the left holds the loupe pen. The whole case hangs on an **IKEA Skådis** pegboard.
-Colours: beige body, brown accents. Every colour has its own print plate, so there is no filament
-change except on the small two-colour name badge.
+Colours: beige body, red accents, and a red name badge with "PLATINEN" in brown and "LUPE" in black.
+Beige and red have their own print plate each, so there is no filament change except on the small
+three-colour badge.
 
 **No glue anywhere.** Every part clicks in: the boards latch into the body, the decorations into the
 lid, fin, quiver, Saturn and hooks into the walls. A slider under the bottom opens only **one** USB
@@ -23,7 +24,8 @@ socket at a time, so two power supplies can never meet.
 | `check.scad` | dummies for both boards, plugs and pen; collisions as intersections |
 | `build.py` | builds everything: lettering, STLs, mesh and collision checks, 3MF, test slice |
 | `tools/bambu_3mf.py`, `tools/bambu_p1s_template.json` | 3MF writer for Bambu Studio, P1S/PLA settings (the template is AGPL-3.0, see `tools/NOTICE-bambu-template.md`) |
-| `tools/render.py` | renders the pictures in `docs/images/` from the STLs |
+| `tools/render_blender.py` | photo-like `case_front.jpg` on a Skådis board (Blender, Cycles) |
+| `tools/render.py` | `case_parts.png`, the print plates (small software rasteriser, no Blender needed) |
 | `print/` | ready-to-print STLs and `platinenlupe_case.3mf` |
 
 ## Build
@@ -32,7 +34,8 @@ socket at a time, so two power supplies can never meet.
 pip install trimesh matplotlib numpy pillow
 python build.py                 # STLs + checks + 3MF, then a test slice if Bambu Studio is found
 python build.py --no-slice
-python tools/render.py          # optional: README pictures
+python tools/render.py          # optional: case_parts.png
+blender -b -P tools/render_blender.py   # optional: case_front.jpg (Blender 5.2, GPU if present)
 ```
 
 `build.py` writes intermediate files to `~/.cache/platinenlupe-enclosure` (`--work`) and copies the
@@ -72,7 +75,7 @@ width makes them too tight or too loose.
 | Skådis board thickness | 5.2 mm (`pegboard_t` − 0.4) | ☐ |
 | NodeMCU on USB: voltage VU to G (multimeter) | 5 V expected, **not confirmed** | ☐ |
 
-## 2. Print (Bambu Lab, AMS: slot 1 beige, slot 2 brown)
+## 2. Print (Bambu Lab, AMS: slot 1 beige, slot 2 red, slot 3 brown, slot 4 black)
 
 ![The three print plates](../docs/images/case_parts.png)
 
@@ -81,8 +84,8 @@ Open `print/platinenlupe_case.3mf`. Three plates, **no supports**:
 | Plate | Parts | Time | Filament |
 |---|---|---|---|
 | 1 Beige | body (back wall down), lid (face side down), 2 hooks | 2 h 02 min | 71.9 g |
-| 2 Brown | porthole ring, speed stripes, 2 light frames, tail fin, Saturn, quiver (upright), USB slider | 37 min | 13.5 g |
-| 3 Badge | name badge in brown with beige lettering inlaid (face side down, 2 filament changes) | 9 min | 2.6 g |
+| 2 Red | porthole ring, speed stripes, 2 light frames, tail fin, Saturn, quiver (upright), USB slider | 37 min | 13.5 g |
+| 3 Badge | red name badge, "PLATINEN" brown and "LUPE" black inlaid (face side down, AMS slots 2–4) | 14 min | 3.7 g |
 
 Sliced with the Bambu Studio CLI, P1S profile, 0.4 mm nozzle, PLA, 0.20 mm layers (2026-10-29).
 The plain STLs in `print/` work in any slicer.
@@ -94,7 +97,7 @@ through 0.6 mm of beige. The exact LED position is not measured; the band covers
 
 1. **Hooks**: push each one into its slot in the back wall from behind, leg pointing down, until it
    clicks. Two prongs catch behind the wall.
-2. **Brown parts on the lid**: lay each one in its recess and press until it clicks. A small tongue at
+2. **Red parts on the lid**: lay each one in its recess and press until it clicks. A small tongue at
    the edge springs back under the rim of the recess.
 3. **Tail fin** into the slot on the right, **quiver** into the slot on the left, **Saturn** into the
    slot on top: push in until it clicks.
@@ -220,7 +223,9 @@ board, enter it at the top of `check.scad`.
 - **0.3 mm next to a wall is not a gap.** The flared top of the quiver jammed against the side wall when
   plugging it in. Everything except its web now stays 1.5 mm away, and a check enforces it.
 - **PNG export fails in the OpenSCAD Flatpak** (no offscreen GL context). `tools/render.py` uses a
-  small software rasteriser instead.
+  small software rasteriser instead; the front view comes from Blender (`tools/render_blender.py`).
+- **Blender: an extruded face keeps its start face pointing the wrong way.** The Skådis slots built with
+  `extrude_face_region` cut nothing with the exact boolean solver until `recalc_face_normals` ran.
 - **STL output is not byte-stable.** OpenSCAD may write the same triangles in a different order on
   every run, so the files in `print/` change in git even when the geometry does not. Compare
   geometry as a set of triangles, not by file hash.

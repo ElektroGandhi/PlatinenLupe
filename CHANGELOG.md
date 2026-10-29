@@ -23,6 +23,11 @@ No restart, smallest free heap 5.8 KB. Only the ESP32 (loupe side) needs flashin
 
 After the first real print (2026-10-29).
 
+- **Colours as printed:** beige body, red accents, red badge with "PLATINEN" in brown and "LUPE" in black.
+  The badge is now three parts (plate, two words) on AMS slots 2, 3 and 4.
+- **Front view rendered with Blender** (`tools/render_blender.py`): the real STLs on a Skådis board, Cycles,
+  `case_front.jpg`. `tools/render.py` now draws only the print plates.
+
 - **No glue any more.** Every part clicks in: snap prongs for fin, quiver, Saturn and hooks; clip tongues
   for ring, stripes, badge and light frames; each tongue checked to ≤ 2 % bending strain.
 - **Boards latch into the body** (four arms per board over the PCB edge): the Dupont plugs cannot push

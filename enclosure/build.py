@@ -12,7 +12,7 @@ Tool commands (both may contain arguments, they are split like a shell would):
                  BAMBU_STUDIO="flatpak-spawn --host $HOME/Apps/bambu-studio/squashfs-root/AppRun"
 Sandboxed tools (Flatpak OpenSCAD, flatpak-spawn) usually only see your home directory -- keep --work there.
 
-Result: print/platinenlupe_case.3mf with three plates (beige, brown, badge in two colours) plus one STL per part.
+Result: print/platinenlupe_case.3mf with three plates (beige, red, badge in three colours) plus one STL per part.
 """
 
 from __future__ import annotations
@@ -34,8 +34,8 @@ sys.path.insert(0, str(HERE / "tools"))
 
 # printable parts -> expected number of separate solids. If it differs, something is loose or fused.
 PRINT_PARTS = {"body": 1, "lid": 1, "hooks": 2, "ring": 1, "stripe": 1, "badge": 1,
-               "badge_text": 12, "light_frames": 2, "fin": 1, "saturn": 1, "quiver": 1, "slider": 1}
-ASSEMBLED = ["assembled_beige", "assembled_brown", "assembled_text", "assembled_pen"]
+               "badge_platinen": 8, "badge_lupe": 4, "light_frames": 2, "fin": 1, "saturn": 1, "quiver": 1, "slider": 1}
+ASSEMBLED = ["assembled_beige", "assembled_red", "assembled_platinen", "assembled_lupe", "assembled_pen"]
 
 # Checks with dummies for both boards (check.scad). Volume of the intersection in mm^3:
 #   collision  must be ~0 (touching faces do not count)
@@ -177,14 +177,16 @@ def check_collisions(scad: list[str], work: Path) -> None:
 
 def project(work: Path, print_dir: Path) -> Path:
     from bambu_3mf import Project
-    p = Project(filaments=[("Beige", "#E8D9B5"), ("Brown", "#6B4A2E")], title="Platinenlupe")
+    p = Project(filaments=[("Beige", "#E8D9B5"), ("Red", "#A3121A"), ("Brown", "#5E3F27"), ("Black", "#141414")],
+                title="Platinenlupe")
     s = lambda n: str(work / f"{n}.stl")
     p.plate("Beige", [("Body", s("body"), 1), ("Lid", s("lid"), 1), ("Hooks", s("hooks"), 1)])
-    p.plate("Brown", [("Porthole ring", s("ring"), 2), ("Speed stripes", s("stripe"), 2),
+    p.plate("Red", [("Porthole ring", s("ring"), 2), ("Speed stripes", s("stripe"), 2),
                       ("Light frames", s("light_frames"), 2), ("Tail fin", s("fin"), 2),
                       ("Quiver", s("quiver"), 2),
                       ("Saturn", s("saturn"), 2), ("USB selector", s("slider"), 2)])
-    p.plate("Badge", [("Badge", [("Plate", s("badge"), 2), ("Lettering", s("badge_text"), 1)])])
+    p.plate("Badge", [("Badge", [("Plate", s("badge"), 2), ("PLATINEN", s("badge_platinen"), 3),
+                                 ("LUPE", s("badge_lupe"), 4)])])
     target = work / "platinenlupe_case.3mf"
     p.write(target)
     print_dir.mkdir(parents=True, exist_ok=True)

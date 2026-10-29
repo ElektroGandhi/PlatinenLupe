@@ -136,10 +136,10 @@ Mehr: [docs/identification.md](docs/identification.md).
 
 ## Das Gehäuse
 
-<p align="center"><img src="docs/images/case_front.png" alt="Atomzeit-Kapsel mit Bullauge, Heckflosse und Köcher für die Lupe" width="70%"></p>
+<p align="center"><img src="docs/images/case_front.jpg" alt="Atomzeit-Kapsel mit Bullauge, Heckflosse und Köcher für die Lupe" width="70%"></p>
 
 Eine „Atomzeit-Kapsel“ im Stil der 50er für die IKEA-Skådis-Lochwand: Bullauge mit Atom, Tempostreifen, Heckflosse,
-ein kleiner Saturn – und ein Köcher für die Lupe. Beige mit braunen Akzenten, ~88 g PLA, ohne Stützen, ohne Kleber:
+ein kleiner Saturn – und ein Köcher für die Lupe. Beige mit roten Akzenten, ~88 g PLA, ohne Stützen, ohne Kleber:
 jedes Teil rastet ein. Ein Schieber an der Unterseite gibt immer nur eine USB-Buchse frei.
 OpenSCAD-Quelle, STL und fertige 3MF: [enclosure/](enclosure/).
 
