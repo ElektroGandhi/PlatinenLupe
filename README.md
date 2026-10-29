@@ -4,6 +4,8 @@
 
 <h1 align="center">Platinenlupe</h1>
 
+<p align="center">💡 Ideas by <b>Blotto</b> · 🤖 Coded by <b>Claude Opus</b></p>
+
 <p align="center">
   <b>Turn a cheap WiFi ear camera into an app-free circuit-board microscope.</b><br>
   Live in any browser. On its own hotspot, in your home network, or with local AI that names the part under the lens.<br>
@@ -214,6 +216,14 @@ with Ollama works well; small models answer fast but guess more.
 
 Not affiliated with the makers of the camera or the EarVision app. All trademarks belong to their owners. This
 project exists for interoperability: it does not modify the camera and contains no vendor code.
+
+## Who made this
+
+💡 **Ideas by Blotto · 🤖 Coded by Claude Opus**
+
+The idea, the testing on real hardware and every decision: **Blotto**. I can't write code myself – but I know
+what I want, and I know how to drive the world-knowledge steam engine. Every line of code, the reverse
+engineering and the documentation: **Claude Opus** (Anthropic), working as my coding agent.
 
 ## License
 

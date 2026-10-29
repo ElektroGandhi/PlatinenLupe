@@ -4,6 +4,8 @@
 
 <h1 align="center">Platinenlupe</h1>
 
+<p align="center">💡 Ideas by <b>Blotto</b> · 🤖 Coded by <b>Claude Opus</b></p>
+
 <p align="center">
   <b>Aus einer günstigen WLAN-Ohrkamera wird ein Platinenmikroskop – ohne App.</b><br>
   Live in jedem Browser. Im eigenen Hotspot, im Heimnetz oder mit lokaler KI, die das Bauteil unter der Linse benennt.<br>
@@ -203,6 +205,14 @@ ein PC mit Ollama klappt gut; kleine Modelle antworten schnell, raten aber öfte
 
 Keine Verbindung zu den Herstellern der Kamera oder der App EarVision. Marken gehören ihren Inhabern. Das Projekt dient
 der Interoperabilität: Es verändert die Kamera nicht und enthält keinen Herstellercode.
+
+## Wer das gemacht hat
+
+💡 **Ideas by Blotto · 🤖 Coded by Claude Opus**
+
+Die Idee, die Tests an echter Hardware und jede Entscheidung: **Blotto**. Ich kann selbst nicht programmieren –
+aber ich weiß, was ich will, und ich weiß die Weltwissens-Dampfmaschine zu bedienen. Jede Zeile Code, das
+Reverse Engineering und die Doku: **Claude Opus** (Anthropic) als mein Programmier-Agent.
 
 ## Lizenz
 
