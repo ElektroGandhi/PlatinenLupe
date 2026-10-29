@@ -127,6 +127,26 @@ static void drainOut() {
 
 static void onControl(AsyncUDPPacket& p) { lastReply = millis(); linkSend(frame::CONTROL, p.data(), p.length()); }
 
+// ---- Two kinds of boot -------------------------------------------------------------------------
+// Bluetooth is only needed to wake the loupe. While it runs, WiFi must keep modem sleep on (coexistence), and
+// packets that reach the napping radio get lost (measured: 32 % of the frames incomplete at -60 dBm). So after
+// waking the loupe the board restarts without Bluetooth and joins with the radio always on. Bluetooth is never
+// switched off (deinit crashed, see setup) — in that boot it is simply never started.
+// A crash or power cycle always starts with Bluetooth; after 3 failed joins without it, the old way stays.
+static const uint32_t WIFI_ONLY = 0x57494649;      // "WIFI"
+RTC_NOINIT_ATTR static uint32_t rtcMagic, rtcFails;
+RTC_NOINIT_ATTR static char rtcSsid[33], rtcPassword[13];
+static bool wifiOnly = false;
+
+static void restartWifiOnly() {
+  memcpy(rtcSsid, ssid, sizeof rtcSsid);
+  memcpy(rtcPassword, password, sizeof rtcPassword);
+  rtcMagic = WIFI_ONLY;
+  Serial.println("Restarting without Bluetooth");
+  Serial.flush();
+  esp_restart();
+}
+
 // ---- Find and wake the loupe -----------------------------------------------------------------
 static bool findAndWake() {
   state = SEARCH;
@@ -187,10 +207,11 @@ static bool findAwakeLoupe() {
 static bool joinLoupeWifi() {
   state = JOIN;
   WiFi.mode(WIFI_STA);
-  // Keep WiFi modem sleep ON. With Bluetooth enabled, switching it off aborts in wifi_set_ps_process
+  // With Bluetooth running, keep WiFi modem sleep ON. Switching it off aborts in wifi_set_ps_process
   // ("Should enable WiFi modem sleep when both WiFi and Bluetooth are enabled"), and starting Bluetooth while
   // it is off aborts in coex_enable — both measured as reboot loops while waking the loupe.
-  WiFi.setSleep(true);
+  // Without Bluetooth (wifiOnly) the radio stays awake and catches every packet.
+  WiFi.setSleep(!wifiOnly);
   for (int attempt = 0; attempt < 3; attempt++) {
     WiFi.begin(ssid, password);
     for (uint32_t t = millis(); millis() - t < 10000;) {
@@ -220,12 +241,13 @@ static void sendStatus() {
   char name[33];
   memcpy(name, ssid, sizeof name - 1);
   name[32] = 0;
-  char json[320];
+  char json[384];
   int n = snprintf(json, sizeof json,
                    "{\"state\":\"%s\",\"ssid\":\"%s\",\"rssi\":%d,\"frames\":%u,\"dropped\":%u,"
-                   "\"aborted\":%u,\"skipped\":%u,\"crc\":%u,\"uptime\":%lu,\"reset\":\"%s\"}",
+                   "\"aborted\":%u,\"skipped\":%u,\"crc\":%u,\"uptime\":%lu,\"reset\":\"%s\",\"bluetooth\":%s}",
                    names[state], name, state == CONNECTED ? WiFi.RSSI() : 0, framesSent, framesDropped,
-                   framesAborted, framesSkipped, reader.crc_errors, millis() / 1000, resetReason());
+                   framesAborted, framesSkipped, reader.crc_errors, millis() / 1000, resetReason(),
+                   wifiOnly ? "false" : "true");
   linkSend(frame::STATUS, (const uint8_t*)json, n);
 }
 
@@ -245,13 +267,20 @@ static void connectionTask(void*) {
         udpVideo.close();
         udpControl.close();
         WiFi.disconnect(true);
+        if (wifiOnly) esp_restart();               // with Bluetooth again, to wake the loupe
         state = SEARCH;
       }
       delay(500);
       continue;
     }
-    if (!findAwakeLoupe() && !findAndWake()) { delay(1000); continue; }
-    if (!joinLoupeWifi()) continue;
+    if (wifiOnly) {
+      if (!joinLoupeWifi()) { rtcFails++; esp_restart(); }
+      rtcFails = 0;
+    } else {
+      if (!findAwakeLoupe() && !findAndWake()) { delay(1000); continue; }
+      if (rtcFails < 3) restartWifiOnly();
+      if (!joinLoupeWifi()) continue;
+    }
     udpVideo.listen(PORT_VIDEO);
     udpVideo.onPacket(onVideo);
     udpControl.listen(PORT_CONTROL);
@@ -270,9 +299,19 @@ void setup() {
   Serial2.setTxBufferSize(TX_BUFFER);
   Serial2.setRxBufferSize(4096);
   Serial2.begin(LINK_BAUD, SERIAL_8N1, PIN_RX, PIN_TX);
-  // Bluetooth first, before WiFi, and only once: coexistence is set up in this order. Never deinit — after
-  // NimBLEDevice::deinit(true) a pending NimBLE timer fired into freed memory (os_callout_timer_cb, reboot loop).
-  NimBLEDevice::init("");
+  bool soft = esp_reset_reason() == ESP_RST_SW;
+  if (!soft) rtcFails = 0;                          // RTC memory holds garbage after power-on
+  wifiOnly = soft && rtcMagic == WIFI_ONLY && rtcFails < 3;
+  rtcMagic = 0;                                     // a crash from here on starts with Bluetooth again
+  if (wifiOnly) {
+    memcpy(ssid, rtcSsid, sizeof ssid);
+    memcpy(password, rtcPassword, sizeof password);
+    ssid[sizeof ssid - 1] = password[sizeof password - 1] = 0;
+  } else {
+    // Bluetooth first, before WiFi, and only once: coexistence is set up in this order. Never deinit — after
+    // NimBLEDevice::deinit(true) a pending NimBLE timer fired into freed memory (os_callout_timer_cb, reboot loop).
+    NimBLEDevice::init("");
+  }
   xTaskCreatePinnedToCore(connectionTask, "connection", 8192, nullptr, 1, nullptr, 0);
 }
 
