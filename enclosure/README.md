@@ -120,8 +120,9 @@ the slider by pushing a pin through one of the small D-shaped holes and lifting 
 
 ### Power rule and the USB slider
 
-**One** USB-C cable, plugged into the **NodeMCU**, powers both boards: the ESP32 gets 5 V through
-VU → VIN.
+**One** USB cable, plugged into the **NodeMCU**, powers both boards: the ESP32 gets 5 V through
+VU → VIN. The NodeMCU v3 LoLin has a **micro-USB** socket, most ESP32 DevKits a USB-C one; both fit the
+notches.
 
 - ⚠️ **Never connect two power supplies while VU–VIN is wired.** The case to avoid: a USB cable in
   the ESP32 while the NodeMCU's USB is powered too.
@@ -132,7 +133,8 @@ VU → VIN.
 | **RUN** (left, default) | NodeMCU (B) | ESP32 (A) | normal use |
 | **FLASH** (right) | ESP32 (A) | NodeMCU (B) | flashing the ESP32 |
 
-  In every position in between, both openings are narrower than the metal shell of a USB-C plug.
+  In every position in between, both openings are narrower than the metal shell of the plug that
+  belongs there: USB-C at the ESP32, micro-USB (6.85 mm) at the NodeMCU — at worst a 2.9 mm gap.
 - Flashing the NodeMCU: slider at RUN, as in normal use.
 
 ## 4. Mounting

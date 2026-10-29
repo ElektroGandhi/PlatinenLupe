@@ -143,6 +143,14 @@ ein kleiner Saturn – und ein Köcher für die Lupe. Beige mit braunen Akzenten
 jedes Teil rastet ein. Ein Schieber an der Unterseite gibt immer nur eine USB-Buchse frei.
 OpenSCAD-Quelle, STL und fertige 3MF: [enclosure/](enclosure/).
 
+<p align="center">
+  <img src="docs/images/real_front.jpg" alt="Das gedruckte Gehäuse an der Skådis-Lochwand, Lupenstift im Köcher" width="32%">
+  <img src="docs/images/real_quiver.jpg" alt="Lupenstift im Köcher neben dem Gehäuse" width="32%">
+  <img src="docs/images/real_inside.jpg" alt="Offenes Gehäuse: NodeMCU links, ESP32 rechts" width="32%">
+</p>
+<p align="center"><sub>Der erste echte Druck (Fassung 1, rote Akzente) – noch geklebt und mit offenen Lichtfenstern;
+das aktuelle Modell behebt beides.</sub></p>
+
 ## Was geprüft ist
 
 | | Stand |

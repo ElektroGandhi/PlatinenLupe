@@ -144,6 +144,14 @@ Saturn — and a quiver that holds the loupe. Beige with brown accents, ~88 g of
 every part clicks in. A slider under the bottom opens only one USB socket at a time.
 OpenSCAD source, STL and a ready 3MF: [enclosure/](enclosure/).
 
+<p align="center">
+  <img src="docs/images/real_front.jpg" alt="The printed case on a Skådis pegboard, loupe pen in the quiver" width="32%">
+  <img src="docs/images/real_quiver.jpg" alt="Loupe pen standing in the quiver next to the case" width="32%">
+  <img src="docs/images/real_inside.jpg" alt="Open case: NodeMCU left, ESP32 right" width="32%">
+</p>
+<p align="center"><sub>The first real print (version 1, red accents) — still glued and with open light windows;
+the current model fixes both.</sub></p>
+
 ## What is tested
 
 | | Status |

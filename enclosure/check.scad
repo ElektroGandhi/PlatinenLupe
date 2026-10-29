@@ -22,6 +22,8 @@ button = [6.0, 3.5, 3.5];      // buttons next to the USB socket (EN/BOOT or RST
 dupont = [2.6, 2.6, 14.0];     // Dupont socket, pushed on up to the plastic of the pin header
 plug   = [12.4, 6.5];          // USB-C plug including strain relief, common size
 metal  = [8.4, 2.6];           // bare metal shell of a USB-C plug (USB-C spec 8.25 x 2.4 + tolerance)
+micro  = [6.85, 1.8];          // bare shell of a micro-USB plug: the NodeMCU v3 LoLin has micro-USB, not USB-C
+                               // (seen on the real board, 2026-10-29) — the smallest plug that must stay out
 
 pcb_z = back_t + cable_h;      // PCB underside
 function y0(pcb) = wall + usb_margin;
@@ -83,7 +85,7 @@ if (check == "retention_slider")    intersection() { body(); translate([0, 0, 0.
 if (check == "collision_plug_run")  intersection() { union() { body(); lid_mounted(); slider(0); } plug_at(boards[0], plug); }
 if (check == "collision_plug_flash") intersection() { union() { body(); lid_mounted(); slider(1); } plug_at(boards[1], plug); }
 if (check == "blocked_esp_run")     intersection() { slider(0); plug_at(boards[1], metal); }      // must NOT be empty
-if (check == "blocked_node_flash")  intersection() { slider(1); plug_at(boards[0], metal); }
-if (check == "blocked_node_mid")    intersection() { slider(0.5); plug_at(boards[0], metal); }
+if (check == "blocked_node_flash")  intersection() { slider(1); plug_at(boards[0], micro); }
+if (check == "blocked_node_mid")    intersection() { slider(0.5); plug_at(boards[0], micro); }
 if (check == "blocked_esp_mid")     intersection() { slider(0.5); plug_at(boards[1], metal); }
 if (check == "boards")              boards();
