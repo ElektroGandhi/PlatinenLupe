@@ -38,7 +38,7 @@ always the same page as the demo.
 | `GND` | — | `G` | `GND` |
 | `VIN` | ← 5 V | `VU` | `VIN` ↔ `VIN` |
 
-UART at 1 Mbaud, framed with a CRC (`include/frame.h`). The ESP8266 moves its UART to D7/D8 with `Serial.swap()`;
+UART at 2 Mbaud, framed with a CRC (`include/frame.h`). The ESP8266 moves its UART to D7/D8 with `Serial.swap()`;
 its log output goes to `D4` (TX only, 115200 baud).
 
 ## First start
@@ -95,16 +95,33 @@ its WiFi: its 128-byte UART FIFO overflowed and almost every frame arrived broke
 0 frames). Now the home side grants frames one at a time (`READY`): one when its frame buffer is empty.
 The loupe side only sends a whole frame when it holds a grant.
 
-Measured on real hardware (NodeMCU in hotspot mode, loupe at −49 dBm): **4.8 frames/s**, 0 misses and 0 CRC errors in 30 s.
-The single frame buffer of the ESP8266 is the limit; a second ESP32 as home side has room for more.
+## Passing frames on while they arrive (1.2.0)
 
-## Why 1 Mbaud
+The loupe side writes the JPEG length into chunk 0 (bytes 16–23 of the loupe header, cable copy only: `PLEN` + u32).
+The home side can then answer with `Content-Length` and hand the frame to the browser while it is still coming over
+the cable — cable and WiFi work at the same time. Bytes already sent leave the buffer, so a frame larger than the
+20 KB buffer streams through. Loupe-side firmware without the marker still works: whole frames, as in 1.1.
 
-At 2 Mbaud the link worked with the loupe close by (−49 dBm: 4.8 frames/s, 0 errors). With the loupe further away
-(−71 dBm) the ESP32 retransmits a lot, and nearly every frame arrived broken at the ESP8266: 753 CRC errors in
-10 minutes, no complete frame after the first 30 s — the picture froze, came back for a few frames, froze again.
-At 1 Mbaud, same place, even weaker signal (−75 dBm): **0 CRC errors, 0 overruns, 3.4 frames/s steady over
-3 minutes**, every frame sent was delivered. `link.b.overruns` in `/api/state` counts bytes the ESP8266 lost.
+What it took on the ESP8266 (each step measured on the real board):
+
+| Problem | Fix |
+|---|---|
+| 33 KB frames did not fit the buffer and were dropped | stream; drop sent bytes from the front |
+| Stream crawled at ~1 KB per 40 ms | lwIP with 1460-byte segments (`PIO_FRAMEWORK_ARDUINO_LWIP2_HIGHER_BANDWIDTH`); the default sends 536-byte segments with only 1072 bytes in flight |
+| Still slow while bytes arrived on the cable | block reads, payload by `memcpy`, CRC from a 16-entry table, `yield()` after every send |
+| Free heap fell to 1.9 KB, board hung | frame buffer 24 → 20 KB |
+| Large frame asked for ahead overflowed the buffer | ask ahead only while the last frame fitted; a frame announced too large is dropped at once |
+
+Measured (loupe at −60 dBm, frames 21–33 KB, average 28.5 KB): **3.7 frames/s, 104 KB/s over 10 minutes,
+no restart, smallest free heap 5.8 KB**; 3.5 % of the fetches failed (75 overflows with very large frames, 4 CRC
+errors) and were retried by the page after 100 ms. With small frames (5–10 KB) 7–10 frames/s.
+
+## Link rate: 2 Mbaud at 160 MHz
+
+1.1 used 1 Mbaud: at 2 Mbaud and 80 MHz, with the loupe further away (−71 dBm), nearly every frame arrived broken at
+the ESP8266 (753 CRC errors in 10 minutes). With the ESP8266 at 160 MHz and the block reader, 2 Mbaud held:
+7.1 frames/s at −86 dBm with 9 KB frames, 0 CRC errors in 60 s; 4 CRC errors in the 10-minute run above.
+`link.b.overruns` in `/api/state` counts bytes the ESP8266 lost; `link.b.reset` and `uptime` show restarts.
 
 ## ESP32 UART pitfall
 

@@ -105,7 +105,7 @@ Ollama eintragen, dort CORS erlauben – fertig. → [docs/identification.md](do
 ```mermaid
 flowchart LR
   L["🔍 Lupe<br/>nur eigenes WLAN"] -- "BLE-Weckruf<br/>WLAN + UDP" --> A["ESP32<br/>Lupenseite"]
-  A -- "3 Drähte · UART 1 Mbaud<br/>ganze Bilder, CRC" --> B["NodeMCU / ESP32<br/>Hausseite"]
+  A -- "3 Drähte · UART 2 Mbaud<br/>Bilder mit CRC" --> B["NodeMCU / ESP32<br/>Hausseite"]
   B -- "Hotspot / Heim-WLAN" --> P["📱 jeder Browser"]
   P -. "Heimnetz: Fokus-Ausschnitt" .-> M["🧠 dein Bildmodell<br/>LM Studio · Ollama"]
 ```
@@ -153,7 +153,8 @@ OpenSCAD-Quelle, STL und fertige 3MF: [enclosure/](enclosure/).
 | Seite auf Handy und Desktop, Deutsch und Englisch, Gerät / Demo | ✅ Headless-Browser |
 | Hotspot-Modus am echten NodeMCU: WPA2-Hotspot, Captive-Portal-Umleitung, Seite 15/15 vollständig, Einstellungen, WLAN-Suche, Verbindung zum ESP32 | ✅ gemessen |
 | Ganze Kette an echter Hardware im Hotspot-Modus: Lupe → ESP32 → NodeMCU → Browser, 4,8 B/s, 0 Aussetzer in 30 s; Neustarts der Lupe werden überbrückt | ✅ gemessen |
-| Schwacher Funk (Lupe bei −75 dBm): 3,4 B/s gleichmäßig über 3 min, 0 Kabelfehler (bei 2 Mbaud fror das Bild im Kreis ein – jetzt 1 Mbaud) | ✅ gemessen |
+| Schwacher Funk (Lupe bei −75 dBm): 3,4 B/s gleichmäßig über 3 min, 0 Kabelfehler (1.1, 1 Mbaud) | ✅ gemessen |
+| 1.2: 2 Mbaud, NodeMCU mit 160 MHz, Bilder werden schon während des Empfangs weitergereicht – 10 min mit 21–33 KB großen Bildern: 3,7 B/s, kein Neustart, kleinster freier Speicher 5,8 KB, 3,5 % der Abrufe wiederholt; kleine Bilder 7–10 B/s | ✅ gemessen |
 | Heimnetz-Modus an der Hardware; Einstellungen überstehen das Firmware-Update | ✅ gemessen |
 | Bauteil-Bestimmung aus dem Browser gegen LM Studio (Seite vom Board, Testbild): SOIC-8 „LM358“, hohe Sicherheit, 5,3 s | ✅ gemessen |
 | Bauteil-Bestimmung mit echter Lupe am Handy | ⏳ in Arbeit |

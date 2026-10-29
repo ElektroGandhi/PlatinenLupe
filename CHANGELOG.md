@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.2.0 — 2026-10-30
+
+Faster picture, measured on the real boards.
+
+- **Frames go to the browser while they still arrive over the cable.** The loupe side announces each frame's
+  length; the home side streams it, so frames larger than its buffer pass too (up to 33 KB measured).
+  Older loupe-side firmware still works (whole frames).
+- **Link at 2 Mbaud**, NodeMCU at 160 MHz, lwIP with full 1460-byte segments, faster link reader (block reads,
+  table CRC). 10 minutes with 21–33 KB frames: 3.7 frames/s, no restart; small frames 7–10 frames/s.
+- The home side reports its reset reason and uptime in `/api/state` (`link.b.reset`, `link.b.uptime`).
+- Page: a frame cut off on the cable is fetched again after 100 ms instead of 1 s.
+- ⚠️ Flash **both** boards: the link rate changed.
+
 ## 1.1.0 — 2026-10-28
 
 No server, no Docker any more.

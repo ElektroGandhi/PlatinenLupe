@@ -58,7 +58,7 @@ identify parts with a vision model you already run (LM Studio, Ollama). Details:
 
 | | |
 |---|---|
-| **Live view** | ~5 fps through a NodeMCU (measured; the camera itself delivers ~16), no plug-ins, no app |
+| **Live view** | 4–10 fps through a NodeMCU, depending on the subject (measured; the camera itself delivers ~16), no plug-ins, no app |
 | **Straighten** | the loupe's motion sensor keeps the picture upright; the view becomes a round porthole so nothing spins in the corners |
 | **Light ring** | 0–100 % from the page, kept alive across restarts of the loupe |
 | **Mirror · Freeze · Zoom 1×/2×/4× · Save photo** | the things you actually need at the bench |
@@ -107,7 +107,7 @@ allow CORS there — done. → [docs/identification.md](docs/identification.md)
 ```mermaid
 flowchart LR
   L["🔍 Loupe<br/>own WiFi only"] -- "BLE wake-up<br/>WiFi + UDP" --> A["ESP32<br/>loupe side"]
-  A -- "3 wires · UART 1 Mbaud<br/>whole frames, CRC" --> B["NodeMCU / ESP32<br/>home side"]
+  A -- "3 wires · UART 2 Mbaud<br/>frames with CRC" --> B["NodeMCU / ESP32<br/>home side"]
   B -- "Hotspot / home WiFi" --> P["📱 any browser"]
   P -. "home network: focus crop" .-> M["🧠 your vision model<br/>LM Studio · Ollama"]
 ```
@@ -154,7 +154,8 @@ OpenSCAD source, STL and a ready 3MF: [enclosure/](enclosure/).
 | Page on phone and desktop, English and German, device / demo | ✅ headless browser |
 | Hotspot mode on a real NodeMCU: WPA2 hotspot, captive-portal redirect, page 15/15 complete, settings, WiFi scan, link to the ESP32 | ✅ measured |
 | Whole chain on real hardware in hotspot mode: loupe → ESP32 → NodeMCU → browser, 4.8 fps, 0 misses in 30 s; loupe restarts are recovered | ✅ measured |
-| Weak signal (loupe at −75 dBm): 3.4 fps steady for 3 min, 0 link errors (at 2 Mbaud it froze in a loop — now 1 Mbaud) | ✅ measured |
+| Weak signal (loupe at −75 dBm): 3.4 fps steady for 3 min, 0 link errors (1.1, 1 Mbaud) | ✅ measured |
+| 1.2: 2 Mbaud, NodeMCU at 160 MHz, frames streamed while they arrive — 10 min with 21–33 KB frames: 3.7 fps, no restart, smallest free heap 5.8 KB, 3.5 % of fetches retried; small frames 7–10 fps | ✅ measured |
 | Home-network mode on hardware; settings kept across the firmware update | ✅ measured |
 | Part identification from the browser against LM Studio (page served by the board, test image): SOIC-8 "LM358", high confidence, 5.3 s | ✅ measured |
 | Part identification with the real loupe on a phone | ⏳ in progress |

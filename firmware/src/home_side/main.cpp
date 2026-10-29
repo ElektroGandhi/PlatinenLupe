@@ -50,7 +50,7 @@ using WebServerT = WebServer;
 #endif
 #define PIN_RESET 0  // FLASH / BOOT button
 
-static const char* FW_VERSION = "1.1.0";
+static const char* FW_VERSION = "1.2.0";
 static const char* DEFAULT_AP_PASSWORD = "platinenlupe";
 static const char* HOSTNAME = "platinenlupe";
 static const uint8_t VIDEO_START[] = {0x20, 0x01}, VIDEO_STOP[] = {0x20, 0x02}, HEARTBEAT[] = {0x10, 0x01};

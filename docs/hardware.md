@@ -39,5 +39,5 @@ Typical datasheet peaks are ~240 mA for the ESP32 transmitting and ~170 mA for t
 ## Range and placement
 
 - Loupe ↔ ESP32: normal WiFi range, but the closer the better — the image is ~200 KB/s.
-- The cable between the boards carries up to ~100 KB/s at 1 Mbaud; keep it short (< 30 cm). 2 Mbaud froze the picture with a distant loupe.
+- The cable between the boards carries up to ~195 KB/s at 2 Mbaud; keep it short (< 30 cm). The NodeMCU runs at 160 MHz for this.
 - In hotspot mode the phone is the only other device; a metre or ten is fine.
